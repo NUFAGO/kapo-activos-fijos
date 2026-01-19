@@ -60,7 +60,7 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
     }
 
     try {
-      // ✅ Asegurar que las tablas existan antes de verificar
+      // Asegurar que las tablas existan antes de verificar
       await ensureTablesExist();
 
       const recursos = await getRecursosFromIndexedDB();
@@ -79,10 +79,10 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
   const populateIndexedDB = async () => {
     try {
       // PRIMERO: Asegurar que todas las tablas existan
-      console.log('🔧 Verifying IndexedDB tables...');
+      console.log('Verifying IndexedDB tables...');
       await ensureTablesExist();
 
-      console.log('📡 Consultando recursos desde API...');
+      console.log('Consultando recursos desde API...');
       const variables: any = {
         activoFijo: true
       };
@@ -91,7 +91,7 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
       const result = await executeQuery(LIST_ALL_RECURSOS_QUERY, variables);
       const recursos = result.listAllRecursos || [];
 
-      console.log('🔄 Convirtiendo formato para IndexedDB...');
+      console.log('Convirtiendo formato para IndexedDB...');
       const recursosFormateados = recursos.map((r: any) => ({
         id: r.id,
         recurso_id: r.recurso_id,

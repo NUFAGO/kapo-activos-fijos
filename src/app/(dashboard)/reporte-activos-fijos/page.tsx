@@ -5,7 +5,7 @@ import { Search, X, Package, Loader2, Plus, FileText, Calendar, User, Eye } from
 import { SelectSearch } from '@/components/ui/select-search';
 import ReporteActivoFijoForm from './components/reporte-activo-fijo-form';
 import ReporteActivoFijoView from './components/reporte-activo-fijo-view';
-import { useReportesActivosFijos } from '@/hooks';
+import { useReportesPaginados } from '@/hooks';
 import { ReporteActivoFijo } from '@/types/activos-fijos.types';
 
 // Función para formatear fecha
@@ -119,9 +119,20 @@ const getEstadoBadge = (estado?: string) => {
 };
 
 
+
 // Componente principal del reporte
 function ReporteRecursosContent() {
-  const { data: reportes, isLoading: loading, error } = useReportesActivosFijos();
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data: result, isLoading: loading, error } = useReportesPaginados({
+    page: currentPage,
+    limit: 20,
+    sortBy: 'fecha_creacion',
+    sortOrder: 'desc' as const
+  });
+
+  const reportes = result?.data || [];
+  const paginationInfo = result?.pagination;
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingReporte, setViewingReporte] = useState<ReporteActivoFijo | null>(null);
@@ -150,15 +161,15 @@ function ReporteRecursosContent() {
 
   // Estadísticas básicas
   const estadisticas = useMemo(() => {
-    if (!reportes) return { totalReportes: 0, totalRecursos: 0 };
+    if (!result) return { totalReportes: 0, totalRecursos: 0 };
 
     const totalRecursos = reportes.reduce((sum, reporte) => sum + (reporte.recursos?.length || 0), 0);
 
     return {
-      totalReportes: reportes.length,
+      totalReportes: paginationInfo?.total || 0,
       totalRecursos,
     };
-  }, [reportes]);
+  }, [result, reportes, paginationInfo]);
 
   const hasActiveFilters = searchQuery.trim().length > 0;
 
@@ -302,9 +313,17 @@ function ReporteRecursosContent() {
                           {getEstadoBadge(getEstadoReporte(reporte.recursos))}
                         </td>
                         <td className="px-4 py-3 text-xs text-[var(--text-primary)]">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(reporte.fecha_creacion)}
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span className="font-medium">{formatDate(reporte.fecha_creacion)}</span>
+                            </div>
+                            {reporte.fecha_sincronizacion && (
+                              <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                                <Calendar className="h-2.5 w-2.5" />
+                                <span className="text-[10px] font-medium">Sync: {formatDate(reporte.fecha_sincronizacion)}</span>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-xs">
@@ -323,6 +342,33 @@ function ReporteRecursosContent() {
                 </table>
               </div>
             </div>
+
+            {/* Paginación */}
+            {paginationInfo && paginationInfo.totalPages > 1 && (
+              <div className="bg-[var(--background)] backdrop-blur-sm rounded-lg card-shadow">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    Página {paginationInfo.page} de {paginationInfo.totalPages} ({paginationInfo.total} reportes totales)
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={paginationInfo.page === 1 || loading}
+                      className="px-3 py-1 border border-[var(--border)] rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--hover)]"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(Math.min(paginationInfo.totalPages, currentPage + 1))}
+                      disabled={paginationInfo.page === paginationInfo.totalPages || loading}
+                      className="px-3 py-1 border border-[var(--border)] rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--hover)]"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="bg-[var(--background)] backdrop-blur-sm rounded-lg card-shadow p-12 text-center">

@@ -121,6 +121,7 @@ export const CREATE_REPORTE_ACTIVO_FIJO_MUTATION = gql`
     $recursos: [RecursoEvaluadoInput!]!
     $notas_generales: String
     $esSincronizacionOffline: Boolean
+    $fecha_creacion: DateTime
   ) {
     addReporteActivoFijo(
       titulo: $titulo
@@ -129,6 +130,7 @@ export const CREATE_REPORTE_ACTIVO_FIJO_MUTATION = gql`
       recursos: $recursos
       notas_generales: $notas_generales
       esSincronizacionOffline: $esSincronizacionOffline
+      fecha_creacion: $fecha_creacion
     ) {
       _id
       id_reporte

@@ -28,20 +28,34 @@ import { useAuth } from '@/hooks';
 import toast from 'react-hot-toast';
 
 /**
- * 📋 HOOKS PARA REPORTES DE ACTIVOS FIJOS
+ * HOOKS PARA REPORTES DE ACTIVOS FIJOS
  */
 
 /**
- * Hook para listar todos los reportes de activos fijos
+ * Hook para listar todos los reportes de activos fijos (con paginación)
  */
-export function useReportesActivosFijos() {
-  return useQuery<ReporteActivoFijo[]>({
-    queryKey: ['reportes-activos-fijos'],
+export function useReportesActivosFijos(limit: number = 1000) {
+  return useQuery<ReportesPaginationResult>({
+    queryKey: ['reportes-activos-fijos', limit],
     queryFn: async () => {
-      const response = await executeQuery<{ listReportesActivosFijos: ReporteActivoFijo[] }>(
-        LIST_REPORTES_ACTIVOS_FIJOS_QUERY
+      const variables = {
+        input: {
+          pagination: {
+            page: 1,
+            limit: limit,
+            sortBy: 'fecha_creacion',
+            sortOrder: 'desc',
+          },
+          filters: null,
+          search: null,
+        }
+      };
+
+      const response = await executeQuery<{ listReportesActivosFijosPaginated: ReportesPaginationResult }>(
+        LIST_REPORTES_PAGINADOS_QUERY,
+        variables
       );
-      return response.listReportesActivosFijos;
+      return response.listReportesActivosFijosPaginated;
     },
     staleTime: 30000, // 30 segundos
   });
@@ -187,12 +201,14 @@ export function useReportesPaginados(input?: ReportesPaginationInput) {
     queryFn: async () => {
       const variables = {
         input: {
-          page: input?.page || 1,
-          limit: input?.limit || 10,
+          pagination: {
+            page: input?.page || 1,
+            limit: input?.limit || 10,
+            sortBy: input?.sortBy,
+            sortOrder: input?.sortOrder,
+          },
           filters: input?.filters,
           search: input?.search,
-          sortBy: input?.sortBy,
-          sortOrder: input?.sortOrder,
         }
       };
 

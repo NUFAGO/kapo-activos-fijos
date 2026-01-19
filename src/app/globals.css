@@ -161,52 +161,9 @@ button[disabled] {
   cursor: not-allowed;
 }
 
-/* Cursor de texto (caret) solo en elementos que contienen TEXTO VISIBLE */
+/* Cursor de texto (caret) en TODOS los elementos */
 * {
   caret-color: transparent;
-}
-
-/* Elementos de entrada de texto EDITABLES */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="number"],
-textarea,
-[contenteditable="true"],
-[contenteditable] {
-  caret-color: auto;
-}
-
-/* Elementos que CONTIENEN TEXTO pero NO son editables */
-
-p, span, label, strong, em, b, i,
-td, th,
-mark, ins, del,
-s, strike, u,
-code, pre, samp, kbd, var,
-dfn, abbr,
-small, big,
-blockquote, cite,
-address, time,
-details, summary {
-  caret-color: text;
-}
-
-/* NUNCA mostrar caret en elementos estructurales/vacíos */
-button, a, select, option,
-div:empty, section:empty, article:empty, aside:empty,
-header:empty, footer:empty, nav:empty, main:empty,
-table, thead, tbody, tr,
-ul:empty, ol:empty, li:empty,
-figure:empty, figcaption:empty,
-form, fieldset, legend,
-img, svg, canvas, video, audio,
-iframe, embed, object,
-progress, meter, hr {
-  caret-color: transparent !important;
 }
 
 /* Estilos de la barra de desplazamiento */

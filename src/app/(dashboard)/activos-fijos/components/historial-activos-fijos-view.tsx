@@ -169,9 +169,9 @@ const ReporteItem = ({ reporte, recursoId }: { reporte: ReporteActivoFijo; recur
 
       {/* Fotos (solo si hay y está expandido) */}
       {showPhotos && recursoEspecifico.evidencia_urls && recursoEspecifico.evidencia_urls.length > 0 && (
-        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[var(--border)]">
+        <div className="mt-2 sm:mt-2 pt-2 sm:pt-2 border-t border-[var(--border)]">
           <div className="mb-3">
-            <span className="text-xs sm:text-sm font-medium text-[var(--text-on-content-bg-heading)]">
+            <span className="text-xs sm:text-xs font-medium text-[var(--text-on-content-bg-heading)]">
               Evidencias ({recursoEspecifico.evidencia_urls.length})
             </span>
           </div>
@@ -213,10 +213,10 @@ export default function HistorialActivosFijosView({
       onClose={onClose}
       title={
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)]">
+          <h2 className="text-lg sm:text-md font-semibold text-[var(--text-primary)]">
             Historial de Reportes
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
             Reportes ordenados de más reciente a más antiguo
           </p>
         </div>
@@ -229,7 +229,7 @@ export default function HistorialActivosFijosView({
           </div>
           <button
             onClick={onClose}
-            className="px-3 sm:px-4 py-2 rounded-lg bg-[var(--surface)] hover:bg-[var(--hover)] text-[var(--text-primary)] text-sm font-medium transition-colors"
+            className="px-3 sm:px-4 py-2 rounded-lg bg-[var(--surface)] hover:bg-[var(--hover)] text-[var(--text-primary)] text-xs font-medium transition-colors"
           >
             Cerrar
           </button>
@@ -245,10 +245,10 @@ export default function HistorialActivosFijosView({
           <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-3 sm:mb-4 mx-auto">
             <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
           </div>
-          <h3 className="text-sm sm:text-base font-medium text-[var(--text-primary)] mb-1">
+          <h3 className="text-xs sm:text-xs font-medium text-[var(--text-primary)] mb-1">
             Error al cargar historial
           </h3>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-md mx-auto">
+          <p className="text-xs sm:text-xs text-[var(--text-secondary)] max-w-md mx-auto">
             No se pudo obtener la información de los reportes.
           </p>
         </div>
@@ -260,14 +260,14 @@ export default function HistorialActivosFijosView({
           <h3 className="text-sm sm:text-base font-medium text-[var(--text-primary)] mb-1">
             Sin historial
           </h3>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-md mx-auto">
+          <p className="text-xs sm:text-xs text-[var(--text-secondary)] max-w-md mx-auto">
             Este recurso no ha sido incluido en ningún reporte aún.
           </p>
         </div>
       ) : (
         <div className="space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-sm sm:text-base font-medium text-[var(--text-primary)]">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
+            <h3 className="text-xs sm:text-xs font-medium text-[var(--text-primary)]">
               {reportesOrdenados.length} reporte{reportesOrdenados.length !== 1 ? 's' : ''} encontrado{reportesOrdenados.length !== 1 ? 's' : ''}
             </h3>
           </div>

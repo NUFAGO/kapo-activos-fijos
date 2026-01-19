@@ -76,6 +76,7 @@ export const LIST_REPORTES_ACTIVOS_FIJOS_QUERY = `
         evidencia_urls
       }
       notas_generales
+      fecha_sincronizacion
       created_at
       updated_at
     }
@@ -250,6 +251,7 @@ export const LIST_REPORTES_PAGINADOS_QUERY = `
           evidencia_urls
         }
         notas_generales
+        fecha_sincronizacion
         created_at
         updated_at
       }

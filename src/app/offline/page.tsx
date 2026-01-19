@@ -62,7 +62,7 @@ export default function OfflinePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-[var(--text-primary)]">
+          <h1 className="text-md font-semibold text-[var(--text-primary)]">
             Centro de Control
           </h1>
           <p className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -126,7 +126,7 @@ export default function OfflinePage() {
                     <page.icon className={`w-6 h-6 ${page.textColor}`} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-medium text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
+                    <h3 className="font-medium text-md text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
                       {page.title}
                     </h3>
                     <p className="text-xs text-[var(--text-secondary)] mt-1">
@@ -170,7 +170,7 @@ export default function OfflinePage() {
                 <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
                   <Database className="w-5 h-5 text-green-600" />
                 </div>
-                <h3 className="font-medium text-[var(--text-primary)]">Sincronizar Datos</h3>
+                <h3 className="font-medium text-md text-[var(--text-primary)]">Sincronizar Datos</h3>
               </div>
               <p className="text-xs text-[var(--text-secondary)]">
                 Sincronizar datos pendientes al reconectar
@@ -186,7 +186,7 @@ export default function OfflinePage() {
                 <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
                   <Trash2 className="w-5 h-5 text-red-600" />
                 </div>
-                <h3 className="font-medium text-[var(--text-primary)]">Limpiar Caché</h3>
+                <h3 className="font-medium text-md text-[var(--text-primary)]">Limpiar Caché</h3>
               </div>
               <p className="text-xs text-[var(--text-secondary)]">
                 Limpiar datos temporales y caché

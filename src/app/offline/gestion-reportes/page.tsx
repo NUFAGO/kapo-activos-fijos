@@ -102,6 +102,7 @@ export default function GestionReportesOfflinePage() {
       }
 
       // Convertir datos offline al formato online
+      const fechaCreacion = new Date(reporte.fecha_creacion);
       const datosOnline = {
         titulo: reporte.titulo,
         usuario_id: reporte.usuario_id,
@@ -114,10 +115,11 @@ export default function GestionReportesOfflinePage() {
           estado: r.estado,
           descripcion: r.descripcion,
           evidencia_urls: r.evidencia_urls || [],
-          evidence_files: r.evidence_files || []
+          evidence_files: r.evidence_files || [] // Incluir fotos guardadas offline
         })),
         notas_generales: reporte.notas_generales,
-        esSincronizacionOffline: true // Indica que viene de sincronización
+        esSincronizacionOffline: true, // Indica que viene de sincronización
+        fecha_creacion: fechaCreacion.toISOString() // Mantener fecha original del offline
       };
 
       // Crear reporte en backend usando executeMutationWithFiles directamente
@@ -125,6 +127,10 @@ export default function GestionReportesOfflinePage() {
         CREATE_REPORTE_ACTIVO_FIJO_MUTATION,
         datosOnline
       );
+
+      if (!response || !response.addReporteActivoFijo) {
+        throw new Error(`Error en sincronización: respuesta inválida del servidor. Response: ${JSON.stringify(response)}`);
+      }
 
       const reporteCreado = response.addReporteActivoFijo;
 
@@ -207,7 +213,7 @@ export default function GestionReportesOfflinePage() {
             <RefreshCw className={cn("h-4 w-4", loadingReportes && "animate-spin")} />
             Refrescar
           </button>
-          <span className="text-sm text-[var(--text-secondary)]">
+          <span className="text-xs text-[var(--text-secondary)]">
             {reportesOffline.length} reporte{reportesOffline.length !== 1 ? 's' : ''}
           </span>
         </div>

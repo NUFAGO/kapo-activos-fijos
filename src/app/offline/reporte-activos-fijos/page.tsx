@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { SelectSearch } from '@/components/ui/select-search';
-import { Search, Camera, Plus, Trash2, User, Calendar, Clock } from 'lucide-react';
+import { Search, Camera, Plus, Trash2, User, Calendar, Clock, AlertTriangle, CheckCircle, FileText, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks';
 import { getRecursosFromIndexedDB, getDB } from '@/lib/db';
@@ -442,12 +442,12 @@ export default function ReporteActivosFijosOfflinePage() {
             </div>
 
             {/* Área expandible - OCUPA TODO EL RESTO */}
-            <div className="flex-1 min-h-0 overflow-hidden border border-dashed rounded-lg p-2">
+            <div className="flex-1 min-h-0 overflow-y-auto border border-dashed rounded-lg p-2">
               {recursosSeleccionados.length > 0 ? (
                 /* Lista de recursos seleccionados */
                 <div className="h-full flex flex-col space-y-2">
                   <div className="flex items-center gap-2 pb-2">
-                    <Camera className="h-4 w-4 text-[var(--text-secondary)]" />
+                    <Package className="h-4 w-4 text-[var(--text-secondary)]" />
                     <span className="text-xs font-medium text-[var(--text-primary)]">
                       Recursos ({recursosSeleccionados.length})
                     </span>
@@ -455,9 +455,9 @@ export default function ReporteActivosFijosOfflinePage() {
 
 
                   {/* Lista scrollable que ocupa todo el resto */}
-                  <div className="flex-1 overflow-y-auto space-y-2">
+                  <div className="flex-1  space-y-2">
                     {recursosSeleccionados.map((recurso) => (
-                      <div key={recurso.id} className="border border-[var(--border)] rounded p-2 bg-[var(--background)] hover:bg-[var(--hover)]">
+                      <div key={recurso.id} className="bg-gradient-to-br from-[var(--card-bg)] via-[var(--card-bg)] to-[var(--card-bg)]/95 rounded-lg shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.05)] overflow-hidden card-shadow hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.15),0_0_0_1px_rgba(255,255,255,0.1)] hover:-translate-y-0.25 transition-all duration-300 p-3">
                         {/* Header del recurso */}
                         <div className="flex items-center justify-between mb-2">
                           <div className="min-w-0 flex-1">
@@ -477,70 +477,83 @@ export default function ReporteActivosFijosOfflinePage() {
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                          {/* Status */}
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                              Estado *
-                            </label>
-                            <Select
-                              value={recurso.status}
-                              onChange={(value) => actualizarStatus(recurso.id, value as RecursoSeleccionado['status'])}
-                              options={ESTADOS_DISPONIBLES}
-                              placeholder="Seleccionar"
-                              renderOption={(option, isSelected, onSelect) => (
-                                <button
-                                  key={option.value}
-                                  onClick={onSelect}
-                                  className={cn(
-                                    'w-full px-3 py-2 text-left hover:bg-[var(--hover-bg)] flex items-center gap-2',
-                                    isSelected && 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]'
-                                  )}
-                                >
-                                  <div className={`w-3 h-3 rounded-full ${(option as any).color || 'bg-gray-400'}`} />
-                                  <span className="text-xs">{option.label}</span>
-                                </button>
-                              )}
-                            />
-                          </div>
-
-                          {/* Fotos */}
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                              Fotos * (1-3)
-                            </label>
-                            <div className="space-y-1">
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) => manejarFotos(recurso.id, e.target.files)}
-                                className="text-xs file:mr-1 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        {/* Layout principal: Estado arriba, fotos al lado, descripción abajo */}
+                        <div className="space-y-3">
+                          {/* Estado - Arriba */}
+                          <div className="flex items-start gap-2">
+                            <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <AlertTriangle className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                                Estado del Recurso *
+                              </label>
+                              <Select
+                                value={recurso.status}
+                                onChange={(value) => actualizarStatus(recurso.id, value as RecursoSeleccionado['status'])}
+                                options={ESTADOS_DISPONIBLES}
+                                placeholder="Seleccionar estado"
                               />
-                              {recurso.fotos.length > 0 && (
-                                <div className="text-xs text-[var(--text-secondary)]">
-                                  {recurso.fotos.length} foto{recurso.fotos.length !== 1 ? 's' : ''}
-                                </div>
-                              )}
                             </div>
                           </div>
 
-                          {/* Descripción */}
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                              Descripción {(recurso.status === 'Observado' || recurso.status === 'Inoperativo') && <span className="text-red-500">*</span>}
-                            </label>
-                            <Textarea
-                              value={recurso.descripcion}
-                              onChange={(e) => actualizarDescripcion(recurso.id, e.target.value)}
-                              placeholder={(recurso.status === 'Observado' || recurso.status === 'Inoperativo')
-                                ? "Obligatorio..."
-                                : "Opcional..."
-                              }
-                              rows={1}
-                              className="text-xs resize-none"
-                              required={recurso.status === 'Observado' || recurso.status === 'Inoperativo'}
-                            />
+                          {/* Fotos al costado - Mejor alineado */}
+                          <div className="flex items-start gap-2">
+                            <div className="w-6 h-6 rounded-md bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <Camera className="h-3 w-3 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                                Evidencias Fotográficas * (1-3 fotos)
+                              </label>
+                              <div className="space-y-1">
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  onChange={(e) => manejarFotos(recurso.id, e.target.files)}
+                                  className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300 dark:hover:file:bg-blue-900/50 file:cursor-pointer file:transition-colors"
+                                />
+                                {recurso.fotos.length > 0 && (
+                                  <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
+                                    <CheckCircle className="h-3 w-3" />
+                                    <span>{recurso.fotos.length} foto{recurso.fotos.length !== 1 ? 's' : ''} seleccionada{recurso.fotos.length !== 1 ? 's' : ''}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Descripción - Abajo con mejor espaciado */}
+                          <div className="flex items-start gap-2">
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              recurso.status === 'Observado' || recurso.status === 'Inoperativo'
+                                ? 'bg-red-50 dark:bg-red-900/20'
+                                : 'bg-gray-50 dark:bg-gray-900/20'
+                            }`}>
+                              <FileText className={`h-3 w-3 ${
+                                recurso.status === 'Observado' || recurso.status === 'Inoperativo'
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-gray-600 dark:text-gray-400'
+                              }`} />
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                                Descripción {(recurso.status === 'Observado' || recurso.status === 'Inoperativo') && <span className="text-red-500">*</span>}
+                              </label>
+                              <Textarea
+                                value={recurso.descripcion}
+                                onChange={(e) => actualizarDescripcion(recurso.id, e.target.value)}
+                                placeholder={
+                                  recurso.status === 'Observado' ? "Describa la observación encontrada..." :
+                                  recurso.status === 'Inoperativo' ? "Explique por qué está inoperativo..." :
+                                  "Notas adicionales (opcional)..."
+                                }
+                                rows={2}
+                                className="text-xs resize-none"
+                                required={recurso.status === 'Observado' || recurso.status === 'Inoperativo'}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>

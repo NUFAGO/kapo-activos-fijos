@@ -140,6 +140,7 @@ export interface ReporteActivoFijo {
   usuario_nombre: string;
   recursos: RecursoEvaluado[];
   notas_generales?: string;
+  fecha_sincronizacion?: string;
   created_at: string;
   updated_at: string;
 }
