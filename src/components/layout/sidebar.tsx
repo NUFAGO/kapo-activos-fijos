@@ -7,12 +7,11 @@ import { useSidebar } from '@/context/sidebar-context';
 import { useTheme } from '@/context/theme-context';
 import { useAuth } from '@/hooks';
 import {
-  LayoutDashboard,
   LogOut,
   X,
   Package,
   Warehouse,
-  BarChart,
+  FileText,
   WifiOff,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -21,24 +20,14 @@ import { useRouter } from 'next/navigation';
 
 const navItems = [
   {
-    name: 'Dashboard',
-    href: '/',
-    icon: LayoutDashboard,
-  },
-  {
-    name: 'Activos Fijos',
+    name: 'Almacen activos fijos',
     href: '/activos-fijos',
     icon: Package,
   },
   {
-    name: 'Almacén Recursos Fijos',
-    href: '/activos-fijos/almacen',
-    icon: Warehouse,
-  },
-  {
     name: 'Reporte Recursos',
     href: '/reporte-activos-fijos',
-    icon: BarChart,
+    icon: FileText,
   },
 ];
 

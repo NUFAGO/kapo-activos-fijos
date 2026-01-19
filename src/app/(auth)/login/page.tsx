@@ -83,6 +83,16 @@ function LoginForm() {
           {/* Header con logo */}
           <div className="bg-gradient-to-br from-[#2563eb]/5 to-[#0d9488]/5 px-8 pt-10 pb-8">
             <div className="flex items-center justify-center gap-6">
+              <div className="relative flex-shrink-0">
+                <Image
+                  src="/logo-activos.png"
+                  alt="Kapo Activos Fijos"
+                  width={80}
+                  height={32}
+                  className="h-auto w-auto max-w-[80px]"
+                  priority
+                />
+              </div>
               <div className="text-center">
                 <h1 className="text-3xl font-bold tracking-tight uppercase bg-gradient-to-r from-[#1e40af] to-[#0f766e] bg-clip-text text-transparent">
                   Activos Fijos
@@ -201,6 +211,16 @@ export default function LoginPage() {
           <div className="rounded-2xl bg-[var(--card-bg)] card-shadow transition-all duration-300 overflow-hidden backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 shadow-xl">
             <div className="bg-gradient-to-br from-[#2563eb]/5 to-[#0d9488]/5 px-8 pt-10 pb-8">
               <div className="flex items-center justify-center gap-6">
+                <div className="relative flex-shrink-0">
+                  <Image
+                    src="/logo-activos.png"
+                    alt="Kapo Activos Fijos"
+                    width={80}
+                    height={32}
+                    className="h-auto w-auto max-w-[80px]"
+                    priority
+                  />
+                </div>
                 <div className="text-center">
                   <h1 className="text-3xl font-bold tracking-tight uppercase bg-gradient-to-r from-[#1e40af] to-[#0f766e] bg-clip-text text-transparent">
                     Activos Fijos

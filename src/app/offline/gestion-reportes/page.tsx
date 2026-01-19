@@ -65,7 +65,9 @@ export default function GestionReportesOfflinePage() {
     setLoadingReportes(true);
     try {
       const reportes = await loadOfflineReports();
-      setReportesOffline(reportes);
+      // Ordenar por fecha de creación (más recientes primero)
+      const reportesOrdenados = reportes.sort((a, b) => b.fecha_creacion - a.fecha_creacion);
+      setReportesOffline(reportesOrdenados);
     } catch (error) {
       console.error('Error al cargar reportes offline:', error);
     } finally {
@@ -248,8 +250,23 @@ export default function GestionReportesOfflinePage() {
               <tbody className="divide-y divide-[var(--border)]">
                 {reportesOffline.map((reporte) => (
                   <tr key={reporte.id} className="hover:bg-[var(--hover)]">
-                    <td className="px-4 py-3 text-xs text-[var(--text-primary)] font-medium">
-                      {formatDate(reporte.fecha_creacion)}
+                    <td className="px-4 py-3 text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        {reporte.sync_status === 'synced' && reporte.fecha_sincronizacion ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[11px] text-[var(--text-secondary)]">
+                              Sync: {formatDate(reporte.fecha_sincronizacion)}
+                            </span>
+                            <span className="text-[11px] text-[var(--text-secondary)]">
+                              Creado: {formatDate(reporte.fecha_creacion)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[var(--text-primary)] font-medium">
+                            {formatDate(reporte.fecha_creacion)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-[var(--text-primary)] max-w-48">
                       <div className="line-clamp-2">

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, WifiOff, Wifi, Database, FileText, Trash2, Settings, Home, Menu, Package } from 'lucide-react';
+import { ArrowLeft, WifiOff, Wifi, Database, FileText, Trash2, Settings, Home, Menu, Package, Sun, Moon } from 'lucide-react';
 import { useOnline } from '@/hooks';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,27 @@ interface OfflineLayoutProps {
 function OfflineHeader({ toggleSidebar }: { toggleSidebar: () => void }) {
   const { status } = useOnline();
   const isOnline = status === 'online';
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    // Leer el tema inicial del localStorage
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const initialTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(initialTheme);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    // Aplicar el tema al documento
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const handleClearCache = () => {
     if (window.confirm('¿Estás seguro de que quieres limpiar el caché? Esta acción no se puede deshacer.')) {
@@ -58,12 +79,16 @@ function OfflineHeader({ toggleSidebar }: { toggleSidebar: () => void }) {
         </span>
       </div>
 
-      <Link
-        href="/"
-        className="flex items-center gap-2 hover:bg-[var(--hover-bg)] p-1.5 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+      <button
+        onClick={toggleTheme}
+        className="hover:bg-[var(--hover-bg)] p-1.5 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" />
-      </Link>
+        {theme === 'dark' ? (
+          <Sun className="w-5 h-5" strokeWidth={2} />
+        ) : (
+          <Moon className="w-5 h-5" strokeWidth={2} />
+        )}
+      </button>
     </header>
   );
 }
@@ -78,6 +103,8 @@ function OfflineSidebar({
   closeSidebar: () => void;
 }) {
   const pathname = usePathname();
+  const { status } = useOnline();
+  const isOnline = status === 'online';
 
   const offlineRoutes = [
     {
@@ -251,7 +278,11 @@ function OfflineSidebar({
                 isCollapsed && !isMobile && 'justify-center'
               )}
             >
-              <WifiOff className="w-4 h-4 transition-all duration-300 ease-in-out group-hover:scale-110" />
+              {isOnline ? (
+                <Wifi className="w-4 h-4 transition-all duration-300 ease-in-out group-hover:scale-110" />
+              ) : (
+                <WifiOff className="w-4 h-4 transition-all duration-300 ease-in-out group-hover:scale-110" />
+              )}
               {!isCollapsed && <span>Volver Online</span>}
             </Link>
           </div>
@@ -305,7 +336,7 @@ export default function OfflineLayout({ children }: OfflineLayoutProps) {
         {/* Contenido principal */}
         <div className="flex-1 flex flex-col h-screen overflow-hidden">
           <OfflineHeader toggleSidebar={toggleSidebar} />
-        <main className="flex-1 overflow-y-auto bg-[var(--content-bg)] p-6">
+        <main className="flex-1 overflow-y-auto bg-[var(--content-bg)] p-4 sm:p-6">
           {children}
         </main>
         </div>
