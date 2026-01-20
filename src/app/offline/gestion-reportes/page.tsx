@@ -7,6 +7,7 @@ import { getDB, getReporteOfflineById, updateReporteOfflineSyncStatus } from '@/
 import { executeMutationWithFiles } from '@/services/graphql-client';
 import { CREATE_REPORTE_ACTIVO_FIJO_MUTATION } from '@/graphql/mutations';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import ReporteOfflineView from './components/reporte-view';
 
 // Función para formatear fecha
@@ -53,6 +54,7 @@ const loadOfflineReports = async (): Promise<any[]> => {
 };
 
 export default function GestionReportesOfflinePage() {
+  const queryClient = useQueryClient();
   const [reportesOffline, setReportesOffline] = useState<any[]>([]);
   const [loadingReportes, setLoadingReportes] = useState(false);
   const [selectedReporte, setSelectedReporte] = useState<any>(null);
@@ -159,6 +161,15 @@ export default function GestionReportesOfflinePage() {
       ));
 
       toast.success('Reporte sincronizado exitosamente');
+
+      // Invalidar queries relacionadas (igual que cuando se crea un reporte online)
+      queryClient.invalidateQueries({ queryKey: ['reportes-activos-fijos'] });
+      queryClient.invalidateQueries({ queryKey: ['reportes-paginados'] });
+      queryClient.invalidateQueries({ queryKey: ['reportes-by-usuario'] });
+      queryClient.invalidateQueries({ queryKey: ['estadisticas-reportes'] });
+      // Invalidar TODAS las queries relacionadas con activos fijos
+      queryClient.invalidateQueries({ queryKey: ['activos-fijos'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['recursos-activos-fijos'], exact: false });
 
     } catch (error: any) {
       console.error('Error sincronizando reporte:', error);

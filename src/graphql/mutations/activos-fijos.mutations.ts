@@ -28,7 +28,6 @@ export const CREATE_ACTIVO_FIJO_MUTATION = `
       descripcion_recurso
       fecha_recurso
       vigente_recurso
-      usado_recurso
       tipo_recurso_id
       clasificacion_recurso_id
     }
@@ -57,7 +56,6 @@ export const UPDATE_ACTIVO_FIJO_MUTATION = `
       descripcion_recurso
       fecha_recurso
       vigente_recurso
-      usado_recurso
       tipo_recurso_id
       clasificacion_recurso_id
     }
@@ -86,7 +84,6 @@ export const DELETE_ACTIVO_FIJO_MUTATION = `
       descripcion_recurso
       fecha_recurso
       vigente_recurso
-      usado_recurso
       tipo_recurso_id
       clasificacion_recurso_id
     }

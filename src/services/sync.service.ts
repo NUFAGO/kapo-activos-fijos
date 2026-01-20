@@ -1,21 +1,14 @@
 import React from 'react';
 
 /**
- * Servicio de sincronización para manejar datos offline/online
- * Coordina entre IndexedDB local y servidor GraphQL
+ * Servicio de sincronización simplificado
+ * 
  */
 
-import { getSyncQueueManager } from '@/lib/db';
-import { SyncQueueManager } from '@/lib/db/sync-queue';
-import type { SyncResult, SyncOperation, ConflictResolution } from '@/lib/db';
-
 export class SyncService {
-  private queueManager: SyncQueueManager;
   private isOnline = false;
-  private syncInProgress = false;
 
   constructor() {
-    this.queueManager = getSyncQueueManager();
     this.setupOnlineListener();
   }
 
@@ -40,235 +33,95 @@ export class SyncService {
   }
 
   /**
-   * Verificar si se puede sincronizar
+   * Verificar si se puede sincronizar (siempre true ahora, simplificado)
    */
   canSync(): boolean {
-    return this.isOnline && !this.syncInProgress;
+    return this.isOnline;
   }
 
   /**
-   * Sincronización automática cuando vuelve la conexión
+   * Sincronización automática - placeholder simplificado
    */
-  async autoSync(): Promise<SyncResult | null> {
-    if (!this.canSync()) {
-      return null;
-    }
-
-    try {
-      console.log('[SyncService] Starting auto-sync...');
-      return await this.sync();
-    } catch (error) {
-      console.error('[SyncService] Auto-sync failed:', error);
-      return null;
-    }
+  async autoSync(): Promise<any | null> {
+    console.log('[SyncService] Auto-sync disabled (tables cleaned)');
+    return null;
   }
 
   /**
-   * Sincronización manual
+   * Sincronización manual - placeholder simplificado
    */
-  async sync(): Promise<SyncResult> {
-    if (this.syncInProgress) {
-      throw new Error('Sync already in progress');
-    }
-
-    if (!this.isOnline) {
-      throw new Error('No internet connection');
-    }
-
-    this.syncInProgress = true;
-
-    try {
-      console.log('[SyncService] Starting manual sync...');
-
-      // Crear AbortController para poder cancelar
-      const abortController = new AbortController();
-
-      // Ejecutar sincronización
-      const result = await this.queueManager.processQueue(abortController.signal);
-
-      console.log('[SyncService] Sync completed:', result);
-
-      // Procesar conflictos si los hay
-      if (result.conflicts.length > 0) {
-        await this.handleConflicts(result.conflicts);
-      }
-
-      return result;
-
-    } catch (error) {
-      console.error('[SyncService] Sync failed:', error);
-      throw error;
-    } finally {
-      this.syncInProgress = false;
-    }
+  async sync(): Promise<any> {
+    throw new Error('Sync service disabled - tables were cleaned up');
   }
 
   /**
-   * Agregar una operación a la queue de sync
+   * Agregar operación - deshabilitado
    */
-  async queueOperation(operation: {
-    entityId: string;
-    entityType: 'informe' | 'proyecto' | 'maquinaria';
-    operation: 'create' | 'update' | 'delete';
-    endpoint: string;
-    payload?: any;
-  }): Promise<string> {
-    const operationId = await this.queueManager.addOperation({
-      entityId: operation.entityId,
-      entityType: operation.entityType,
-      operation: operation.operation,
-      endpoint: operation.endpoint,
-      method: operation.operation === 'delete' ? 'DELETE' :
-              operation.operation === 'create' ? 'POST' : 'PUT',
-      payload: operation.payload,
-      timestamp: Date.now(),
-      priority: 'normal',
-    });
-
-    console.log(`[SyncService] Queued ${operation.operation} operation:`, operationId);
-
-    // Intentar sync inmediato si estamos online
-    if (this.canSync()) {
-      setTimeout(() => this.autoSync(), 1000); // Delay pequeño
-    }
-
-    return operationId;
+  async queueOperation(): Promise<string> {
+    throw new Error('Queue operations disabled - tables cleaned up');
   }
 
   /**
-   * Obtener estadísticas de sincronización
+   * Obtener estadísticas - versión simplificada
    */
   async getSyncStats() {
-    const queueStats = await this.queueManager.getStats();
-    const isOnline = this.isOnline;
-    const canSync = this.canSync();
-
     return {
-      queue: queueStats,
+      queue: { total: 0, pending: 0, failed: 0 },
       connection: {
-        isOnline,
-        canSync,
-        syncInProgress: this.syncInProgress,
+        isOnline: this.isOnline,
+        canSync: this.canSync(),
+        syncInProgress: false,
       },
       summary: {
-        pendingOperations: queueStats.pending,
-        failedOperations: queueStats.failed,
-        totalOperations: queueStats.total,
-        needsAttention: queueStats.failed > 0,
+        pendingOperations: 0,
+        failedOperations: 0,
+        totalOperations: 0,
+        needsAttention: false,
       },
     };
   }
 
   /**
-   * Reintentar operaciones fallidas
+   * Reintentar operaciones - deshabilitado
    */
-  async retryFailedOperations(): Promise<SyncResult> {
-    if (!this.canSync()) {
-      throw new Error('Cannot retry: no connection or sync in progress');
-    }
-
-    console.log('[SyncService] Retrying failed operations...');
-
-    // Obtener operaciones fallidas y marcarlas como pendientes
-    const db = await import('@/lib/db').then(m => m.getDB());
-    const failedOps = await db.getAllFromIndex('syncQueue', 'timestamp');
-
-    const retryOps = failedOps.filter(op => op.status === 'failed');
-
-    if (retryOps.length === 0) {
-      return {
-        success: true,
-        operations: [],
-        conflicts: [],
-        stats: { uploaded: 0, downloaded: 0, errors: 0, conflicts: 0 }
-      };
-    }
-
-    console.log(`[SyncService] Retrying ${retryOps.length} failed operations`);
-
-    // Marcar como pendientes para reintento
-    const updates = retryOps.map(op => ({
-      ...op,
-      status: 'pending' as const,
-      retryCount: 0,
-      updatedAt: Date.now(),
-    }));
-
-    await Promise.all(updates.map(op => db.put('syncQueue', op)));
-
-    // Ejecutar sync
-    return await this.sync();
+  async retryFailedOperations(): Promise<any> {
+    throw new Error('Retry operations disabled - tables cleaned up');
   }
 
   /**
-   * Limpiar operaciones completadas antiguas
+   * Limpiar operaciones - deshabilitado
    */
-  async cleanOldOperations(daysOld = 7): Promise<number> {
-    return await this.queueManager.cleanCompletedOperations(daysOld);
+  async cleanOldOperations(): Promise<number> {
+    console.log('[SyncService] Clean operations disabled - no queue');
+    return 0;
   }
 
   /**
-   * Cancelar sincronización en curso
+   * Cancelar sincronización - deshabilitado
    */
   cancelSync(): void {
-    if (this.syncInProgress) {
-      console.log('[SyncService] Cancelling sync...');
-      this.queueManager.cancelProcessing();
-    }
+    console.log('[SyncService] Cancel sync disabled - no active sync');
   }
 
   /**
-   * Manejar conflictos de sincronización
-   * (Versión básica - solo logging)
+   * Manejar conflictos - deshabilitado
    */
-  private async handleConflicts(conflicts: ConflictResolution[]): Promise<void> {
-    console.warn('[SyncService] Conflicts detected:', conflicts.length);
-
-    for (const conflict of conflicts) {
-      console.warn('[SyncService] Conflict:', {
-        entity: conflict.entityId,
-        type: conflict.entityType,
-        strategy: conflict.strategy,
-      });
-
-      // TODO: Implementar resolución automática de conflictos
-      // Por ahora, solo loggear
-    }
+  private async handleConflicts(): Promise<void> {
+    console.log('[SyncService] Conflict handling disabled');
   }
 
   /**
-   * Forzar actualización de datos desde el servidor
-   * (Pull sync - descargar cambios del servidor)
+   * Pull sync - deshabilitado
    */
   async pullSync(): Promise<void> {
-    if (!this.isOnline) {
-      throw new Error('Cannot pull sync: no connection');
-    }
-
-    console.log('[SyncService] Starting pull sync...');
-
-    // TODO: Implementar lógica para descargar cambios del servidor
-    // - Obtener timestamp de última sync
-    // - Consultar cambios desde entonces
-    // - Actualizar IndexedDB
-    // - Resolver conflictos
-
-    console.log('[SyncService] Pull sync completed (placeholder)');
+    console.log('[SyncService] Pull sync disabled - tables cleaned up');
   }
 
   /**
-   * Sincronización completa (push + pull)
+   * Full sync - deshabilitado
    */
-  async fullSync(): Promise<SyncResult> {
-    console.log('[SyncService] Starting full sync...');
-
-    // Primero push (enviar cambios locales)
-    const pushResult = await this.sync();
-
-    // Luego pull (descargar cambios del servidor)
-    await this.pullSync();
-
-    return pushResult;
+  async fullSync(): Promise<any> {
+    throw new Error('Full sync disabled - tables cleaned up');
   }
 }
 
@@ -306,20 +159,22 @@ export function useSyncService() {
   const sync = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await service.sync();
+      console.log('[useSyncService] Sync disabled - tables cleaned up');
+      // No hacer nada, solo simular
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await refreshStats();
-      return result;
+      return { success: true, operations: [], conflicts: [], stats: { uploaded: 0, downloaded: 0, errors: 0, conflicts: 0 } };
     } catch (error) {
       console.error('[useSyncService] Sync failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [service, refreshStats]);
+  }, [refreshStats]);
 
   React.useEffect(() => {
     refreshStats();
-    const interval = setInterval(refreshStats, 10000); // Cada 10 segundos
+    const interval = setInterval(refreshStats, 30000); // Cada 30 segundos (menos frecuente)
     return () => clearInterval(interval);
   }, [refreshStats]);
 

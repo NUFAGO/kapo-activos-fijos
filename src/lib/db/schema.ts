@@ -13,104 +13,19 @@ export interface BaseEntity {
 // Estado de sincronización
 export type SyncStatus = 'pending' | 'synced' | 'error';
 
-// Informe de maquinaria (datos principales offline)
-export interface OfflineInforme extends BaseEntity {
-  // Datos del informe
-  proyectoId: string;
-  maquinariaId: string;
-  fecha: string;
-  operador: string;
-
-  // Campos editables offline
-  detalleMaquinariaCampos: {
-    calentamiento: number;
-    total_kilometros: number;
-    [key: string]: any; // Para campos dinámicos
-  };
-
-  // Estado de sync
-  syncStatus: SyncStatus;
-  lastSyncAttempt?: number;
-  syncError?: string;
-  version: number; // Para conflictos
-}
-
-// Item en la queue de sincronización
-export interface SyncQueueItem extends BaseEntity {
-  // Identificación
-  entityId: string; // ID del informe o entidad relacionada
-  entityType: 'informe' | 'proyecto' | 'maquinaria';
-
-  // Operación a sincronizar
-  operation: 'create' | 'update' | 'delete';
-
-  // Datos para enviar
-  endpoint: string;
-  method: 'POST' | 'PUT' | 'DELETE';
-  payload: any;
-
-  // Estado y reintentos
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  retryCount: number;
-  maxRetries: number;
-  lastAttempt?: number;
-  nextRetryAt?: number;
-  timestamp: number;
-
-  // Información de error
-  errorMessage?: string;
-  errorCode?: string;
-
-  // Prioridad (para ordenar sync)
-  priority: 'low' | 'normal' | 'high' | 'critical';
-
-}
-
-// Datos de referencia cacheados (solo lectura)
-export interface ReferenceData extends BaseEntity {
-  // Identificador único
-  key: string;
-
-  // Categoría de datos
-  category: 'proyectos' | 'maquinaria' | 'operadores' | 'config';
-
-  // Datos cacheados
-  data: any;
-
-  // Control de expiración
-  expiresAt: number;
-  ttl: number; // Time to live en segundos
-
-  // Versionado
-  version: number;
-  etag?: string; // Para validar cambios
-}
-
-// Configuración de la aplicación
+// Configuración de la aplicación (timestamps de sync, etc.)
 export interface AppConfig extends BaseEntity {
   key: string;
   value: any;
-  category: 'ui' | 'sync' | 'cache' | 'offline';
+  category: 'sync' | 'config';
   description?: string;
 }
 
-// Estadísticas de la base de datos
+// Estadísticas de la base de datos (simplificadas)
 export interface DBStats {
-  informes: {
-    total: number;
-    pending: number;
-    error: number;
-    synced: number;
-  };
-  syncQueue: {
-    total: number;
-    pending: number;
-    failed: number;
-  };
-  referenceData: {
-    total: number;
-    expired: number;
-  };
+  appConfig: number;
+  recursos: number;
+  reportesOffline: number;
   storage: {
     used: number;
     available: number;

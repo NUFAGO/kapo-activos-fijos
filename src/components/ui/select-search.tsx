@@ -15,6 +15,7 @@ export interface SelectSearchProps {
   onChange: (value: string | null) => void;
   options: SelectSearchOption[];
   placeholder?: string;
+  message?: string; // Mensaje a mostrar cuando no hay selección (en lugar del placeholder)
   className?: string;
   disabled?: boolean;
   isLoading?: boolean;
@@ -28,6 +29,7 @@ export function SelectSearch({
   onChange,
   options,
   placeholder = 'Seleccionar...',
+  message,
   className,
   disabled = false,
   isLoading = false,
@@ -46,25 +48,31 @@ export function SelectSearch({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Encontrar la opción seleccionada para mostrar su label
-  // Si el valor es null o vacío, buscar la opción con value === '' como valor por defecto
+  // Si hay message definido y value es vacío, NO considerar opción seleccionada
   const selectedOption = React.useMemo(() => {
-    if (!value && value !== '') {
-      // Si es null o undefined, buscar opción por defecto (value === '')
-      const defaultOption = options.find(opt => opt.value === '');
-      return defaultOption || null;
+    // Si hay message y value es vacío, no buscar opción seleccionada
+    if (message && (value == null || value === '')) {
+      return null;
     }
     return options.find(opt => opt.value === value);
-  }, [value, options]);
+  }, [value, options, message]);
 
   // Sincronizar inputValue con value cuando cambia externamente
-  // Si hay una opción seleccionada, mostrar su label, sino el value
+  // Si hay una opción seleccionada, mostrar su label
+  // Si no hay selección y hay message, mostrar el message cuando está cerrado
+  // Si está abierto, mantener vacío para búsqueda
   useEffect(() => {
     if (selectedOption) {
       setInputValue(selectedOption.label);
-    } else {
-      setInputValue(value || '');
+    } else if (isOpen) {
+      // Cuando está abierto, mantener vacío para búsqueda (no cambiar si ya tiene algo)
+      if (inputValue === message) {
+        setInputValue('');
+      }
+    } else if (message && (value == null || value === '')) {
+      setInputValue(message);
     }
-  }, [value, selectedOption]);
+  }, [value, selectedOption, isOpen, message, inputValue]);
 
   // Búsqueda en servidor cuando hay onSearch
   useEffect(() => {
@@ -140,10 +148,14 @@ export function SelectSearch({
         !dropdownRef.current.contains(target)
       ) {
         setIsOpen(false);
-        // Si el valor no coincide con ninguna opción, mantenerlo como está
+        // Si el valor no coincide con ninguna opción y no es el message, mantenerlo como está
         const matchingOption = options.find(opt => opt.value === inputValue || opt.label === inputValue);
-        if (!matchingOption && inputValue) {
+        if (!matchingOption && inputValue && inputValue !== message) {
           onChange(inputValue);
+        }
+        // Si se cerró sin selección y hay message, mostrar el message
+        if (!inputValue && message && (value == null || value === '')) {
+          setInputValue(message);
         }
       }
     };
@@ -225,17 +237,19 @@ export function SelectSearch({
     const newValue = e.target.value;
     setInputValue(newValue);
     setIsOpen(true);
-    // Si coincide exactamente con una opción, actualizar el valor
+    // Si coincide exactamente con una opción Y no es el message, actualizar el valor
     const exactMatch = options.find(opt => opt.value === newValue || opt.label === newValue);
-    if (exactMatch) {
+    if (exactMatch && newValue !== message) {
       onChange(exactMatch.value);
-    } else {
-      // Permitir escribir valores personalizados
-      onChange(newValue || null);
     }
+    // No llamar onChange para valores personalizados durante la búsqueda
   };
 
   const handleInputFocus = () => {
+    // Si está mostrando el message, limpiarlo para mostrar placeholder
+    if (inputValue === message) {
+      setInputValue('');
+    }
     setIsOpen(true);
   };
 
@@ -252,8 +266,8 @@ export function SelectSearch({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setInputValue('');
-    onChange(null);
+    setInputValue(message || '');
+    onChange('');
     setIsOpen(false);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -337,7 +351,7 @@ export function SelectSearch({
           )}
         />
         <div className="absolute right-1 flex items-center gap-0.5 flex-shrink-0 pointer-events-none">
-          {inputValue && !disabled && (
+          {selectedOption && !disabled && (
             <button
               type="button"
               onClick={(e) => {

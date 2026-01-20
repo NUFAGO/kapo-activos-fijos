@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { useActivosFijos, usePageState } from '@/hooks';
+import { useActivosFijos, useObras, useBodegas, usePageState } from '@/hooks';
 import { ActivosFijosPaginationInput } from '@/types/activos-fijos.types';
 import { Search, X, Package, Building2, CheckCircle2, AlertTriangle, Loader2, Eye, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { SelectSearch } from '@/components/ui/select-search';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import HistorialActivosFijosView from './components/historial-activos-fijos-view';
 
@@ -15,28 +17,55 @@ function ActivosFijosContent() {
   const [historialModalOpen, setHistorialModalOpen] = useState(false);
   const [selectedRecursoId, setSelectedRecursoId] = useState<string | null>(null);
 
+  // Estados para filtros UI (valores seleccionados)
+  const [selectedObra, setSelectedObra] = useState<string>('');
+  const [selectedEstado, setSelectedEstado] = useState<string>('');
+  const [selectedBodega, setSelectedBodega] = useState<string>('');
+
+  // Estado para filtros aplicados (que se envían a la query)
+  const [appliedFilters, setAppliedFilters] = useState({
+    id_obra: undefined as string | undefined,
+    id_bodega: undefined as string | undefined,
+    estado_recurso_almacen: undefined as string | undefined,
+  });
 
   // Hook para obtener datos
   const queryParams: ActivosFijosPaginationInput = {
     page: currentPage,
     itemsPage: 20,
     searchTerm: searchQuery || undefined,
+    filter: appliedFilters,
   };
 
   const { data, isLoading, error } = useActivosFijos(queryParams);
+  const { data: obrasData, isLoading: obrasLoading } = useObras();
+  const { data: bodegasData, isLoading: bodegasLoading } = useBodegas();
 
   const activos = data?.almacenActivosFijos || [];
   const paginationInfo = data?.info;
+  const obras = obrasData || [];
+  const bodegas = bodegasData || [];
 
-  // Estadísticas de ejemplo (valores fijos para demo)
-  const estadisticas = {
-    totalActivos: 20,
-    activosVigentes: 20,
-    activosUsados: 0,
-    totalValor: '5,339.17'
+  // Filtrar bodegas por obra seleccionada
+  const bodegasFiltradas = selectedObra
+    ? bodegas.filter(bodega => bodega.obra_id === selectedObra)
+    : bodegas;
+
+  const hasActiveFilters = searchQuery.trim().length > 0 || appliedFilters.id_obra || appliedFilters.id_bodega || appliedFilters.estado_recurso_almacen;
+
+  // Función para limpiar todos los filtros
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSelectedObra('');
+    setSelectedEstado('');
+    setSelectedBodega('');
+    setAppliedFilters({
+      id_obra: undefined,
+      id_bodega: undefined,
+      estado_recurso_almacen: undefined,
+    });
+    clearFilters();
   };
-
-  const hasActiveFilters = searchQuery.trim().length > 0;
 
   // Función para formatear moneda
   const formatCurrency = (amount: number) => {
@@ -115,56 +144,74 @@ function ActivosFijosContent() {
           {/* Filtros temporales - Responsive */}
           <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
             {/* Select Obra */}
-            <select className="h-8 px-3 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--primary)] min-w-0 flex-1 sm:flex-none sm:w-auto">
-              <option value="">Todas las obras</option>
-              <option value="obra1">Obra 1</option>
-              <option value="obra2">Obra 2</option>
-              <option value="obra3">Obra 3</option>
-            </select>
+            <SelectSearch
+              value={selectedObra || null}
+              onChange={(value) => {
+                setSelectedObra(value || '');
+                setSelectedBodega(''); // Reset bodega cuando cambia la obra
+              }}
+              options={obras.map((obra) => ({
+                value: obra._id,
+                label: obra.nombre
+              }))}
+              message="Todas las obras"
+              className="h-8 text-xs min-w-0 flex-1 sm:flex-none sm:w-auto"
+            />
 
-            {/* Select Estatus */}
-            <select className="h-8 px-3 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--primary)] min-w-0 flex-1 sm:flex-none sm:w-auto">
-              <option value="">Todos los estatus</option>
-              <option value="operativo">Operativo</option>
-              <option value="observado">Observado</option>
-              <option value="inoperativo">Inoperativo</option>
-              <option value="no-encontrado">No encontrado</option>
-            </select>
+            {/* Select Estado */}
+            <Select
+              value={selectedEstado || null}
+              onChange={(value) => setSelectedEstado(value || '')}
+              options={[
+                { value: '', label: 'Todos los estados' },
+                { value: 'operativo', label: 'Operativo' },
+                { value: 'observado', label: 'Observado' },
+                { value: 'inoperativo', label: 'Inoperativo' },
+                { value: 'no-encontrado', label: 'No encontrado' }
+              ]}
+              placeholder="Seleccionar estado"
+              className="h-8 text-xs min-w-0 flex-1 sm:flex-none sm:w-auto"
+            />
 
             {/* Select Bodega */}
-            <select className="h-8 px-3 py-1 text-xs bg-[var(--background)] border border-[var(--border)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--primary)] min-w-0 flex-1 sm:flex-none sm:w-auto">
-              <option value="">Todas las bodegas</option>
-              <option value="bodega1">Bodega 1</option>
-              <option value="bodega2">Bodega 2</option>
-              <option value="bodega3">Bodega 3</option>
-            </select>
+            <SelectSearch
+              value={selectedBodega || null}
+              onChange={(value) => setSelectedBodega(value || '')}
+              options={bodegasFiltradas.map((bodega) => ({
+                value: bodega._id,
+                label: `${bodega.nombre} (${bodega.codigo})`
+              }))}
+              message="Todas las bodegas"
+              className="h-8 text-xs min-w-0 flex-1 sm:flex-none sm:w-auto"
+            />
 
             {/* Botones */}
             <div className="flex gap-2 min-w-0 flex-1 sm:flex-none">
               {/* Botón Filtrar */}
-              <button className="h-8 px-3 py-1 text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors duration-200 flex-1 sm:flex-none">
+              <button
+                onClick={() => {
+                  setAppliedFilters({
+                    id_obra: selectedObra || undefined,
+                    id_bodega: selectedBodega || undefined,
+                    estado_recurso_almacen: selectedEstado || undefined,
+                  });
+                  setCurrentPage(1); // Resetear a primera página
+                }}
+                className="h-8 px-3 py-1 text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors duration-200 flex-1 sm:flex-none"
+              >
                 Filtrar
               </button>
 
               {/* Botón Limpiar */}
-              <button className="h-8 px-3 py-1 text-xs bg-[var(--background)]/50 hover:bg-[var(--background)]/70 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] rounded-md transition-colors duration-200 flex-1 sm:flex-none">
+              <button
+                onClick={clearAllFilters}
+                className="h-8 px-3 py-1 text-xs bg-[var(--background)]/50 hover:bg-[var(--background)]/70 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] rounded-md transition-colors duration-200 flex-1 sm:flex-none"
+              >
                 Limpiar
               </button>
             </div>
           </div>
 
-          {/* Botón limpiar filtros */}
-          {hasActiveFilters && (
-            <div>
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1.5 h-8 px-3 py-1 rounded-lg bg-[var(--background)]/50 hover:bg-[var(--background)]/70 text-[var(--text-secondary)] hover:text-[var(--text-primary)] shadow-sm hover:shadow transition-all duration-200"
-              >
-                <X className="h-4 w-4" />
-                Limpiar
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -219,7 +266,7 @@ function ActivosFijosContent() {
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {activos.map((activo) => (
-                      <tr key={activo.id_recurso} className="hover:bg-[var(--hover)] ">
+                      <tr key={`${activo.id_recurso}-${activo.id_bodega}`} className="hover:bg-[var(--hover)] ">
                         <td className="px-4 py-3 text-xs text-[var(--text-primary)] font-medium w-10">
                           {activo.codigo_recurso}
                         </td>
@@ -239,7 +286,7 @@ function ActivosFijosContent() {
                         <td className="px-4 py-3 text-xs text-[var(--text-primary)]">
                           {formatCurrency(activo.cantidad_recurso * activo.costo_recurso)}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[var(--text-primary)] w-20">
+                        <td className="px-4 py-3 text-xs text-[var(--text-primary)] w-50">
                           <div>
                             <div className="font-medium">{activo.nombre_bodega}</div>
                             <div className="text-xs text-[var(--text-secondary)]">

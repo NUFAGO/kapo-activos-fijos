@@ -27,9 +27,14 @@ export interface ActivoFijo {
   descripcion_recurso?: string;
   fecha_recurso?: string;
   vigente_recurso: boolean;
-  usado_recurso: boolean;
   tipo_recurso_id?: string;
   clasificacion_recurso_id?: string;
+  estado_recurso_almacen?: string;
+}
+
+export interface ActivosFijosFilterInput {
+  id_obra?: string;
+  id_bodega?: string;
   estado_recurso_almacen?: string;
 }
 
@@ -37,6 +42,7 @@ export interface ActivosFijosPaginationInput {
   page?: number;
   itemsPage?: number;
   searchTerm?: string;
+  filter?: ActivosFijosFilterInput;
   filterRangeDate?: {
     fecha_desde?: string;
     fecha_hasta?: string;
@@ -92,7 +98,6 @@ export interface UpdateActivoFijoInput {
   unidad_recurso_id?: string;
   descripcion_recurso?: string;
   vigente_recurso?: boolean;
-  usado_recurso?: boolean;
   tipo_recurso_id?: string;
   clasificacion_recurso_id?: string;
 }

@@ -1,8 +1,3 @@
-/**
- * Componente para mostrar el estado de sincronización offline/online
- * Indica cuando hay datos pendientes de sincronizar o procesos en curso
- */
-
 'use client';
 
 import React from 'react';
@@ -16,9 +11,10 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { useOnline } from '@/hooks';
-import { getSyncQueueManager } from '@/lib/db';
+import { useOnline } from '@/hooks/use-online';
+import { getDBStats } from '@/lib/db';
 import type { DBStats } from '@/lib/db';
+import type { ConnectionStatus } from '@/lib/db';
 
 interface SyncIndicatorProps {
   className?: string;
@@ -31,23 +27,19 @@ export function SyncIndicator({
   showDetails = false,
   compact = false
 }: SyncIndicatorProps) {
-  const { status: connectionStatus } = useOnline();
+  const onlineState = useOnline();
+  const connectionStatus = (onlineState as any).status as ConnectionStatus;
   const [syncStats, setSyncStats] = React.useState<DBStats | null>(null);
   const [isSyncing, setIsSyncing] = React.useState(false);
 
-  // Cargar estadísticas de sync
+  // Cargar estadísticas de DB
   React.useEffect(() => {
     const loadStats = async () => {
       try {
-        const manager = getSyncQueueManager();
-        const stats = await manager.getStats();
-        setSyncStats({
-          informes: { total: 0, pending: stats.pending, error: stats.failed, synced: stats.completed },
-          syncQueue: { total: stats.total, pending: stats.pending, failed: stats.failed },
-          referenceData: { total: 0, expired: 0 },
-          storage: { used: 0, available: 0, quota: 0 }
-        });
-        setIsSyncing(manager.isCurrentlyProcessing());
+        const stats = await getDBStats();
+        setSyncStats(stats);
+        // No hay más sync processing ya que eliminamos syncQueue
+        setIsSyncing(false);
       } catch (error) {
         console.error('[SyncIndicator] Failed to load stats:', error);
       }
@@ -62,8 +54,9 @@ export function SyncIndicator({
 
   // Determinar estado general
   const getStatusConfig = () => {
-    const hasPendingSync = (syncStats?.syncQueue.pending ?? 0) > 0;
-    const hasErrors = (syncStats?.syncQueue.failed ?? 0) > 0;
+    // Ahora usamos reportesOffline en lugar de syncQueue
+    const hasPendingSync = (syncStats?.reportesOffline ?? 0) > 0;
+    const hasErrors = false; // Ya no trackeamos errores específicos
     const isOnline = connectionStatus === 'online';
 
     if (isSyncing) {
@@ -84,7 +77,7 @@ export function SyncIndicator({
         bgColor: 'bg-red-100',
         icon: AlertCircle,
         title: 'Errores de sincronización',
-        message: `${syncStats?.syncQueue.failed} elementos con error`,
+        message: 'Hay errores en reportes offline',
       };
     }
 
@@ -95,7 +88,7 @@ export function SyncIndicator({
         bgColor: 'bg-yellow-100',
         icon: Clock,
         title: 'Datos pendientes',
-        message: `${syncStats?.syncQueue.pending} elementos por sincronizar`,
+        message: `${syncStats?.reportesOffline} reportes offline`,
       };
     }
 
@@ -106,7 +99,7 @@ export function SyncIndicator({
         bgColor: 'bg-orange-100',
         icon: CloudOff,
         title: 'Modo offline',
-        message: `${syncStats?.syncQueue.pending} elementos listos para sync`,
+        message: `${syncStats?.reportesOffline} reportes offline pendientes`,
       };
     }
 
@@ -164,12 +157,12 @@ export function SyncIndicator({
         {showDetails && syncStats && (
           <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span className="text-gray-600">Pendientes:</span>
-              <span className="ml-1 font-medium">{syncStats.syncQueue.pending}</span>
+              <span className="text-gray-600">Reportes offline:</span>
+              <span className="ml-1 font-medium">{syncStats.reportesOffline}</span>
             </div>
             <div>
-              <span className="text-gray-600">Errores:</span>
-              <span className="ml-1 font-medium text-red-600">{syncStats.syncQueue.failed}</span>
+              <span className="text-gray-600">Recursos cache:</span>
+              <span className="ml-1 font-medium">{syncStats.recursos}</span>
             </div>
           </div>
         )}
@@ -196,9 +189,8 @@ export function SyncBadge() {
   React.useEffect(() => {
     const loadCount = async () => {
       try {
-        const manager = getSyncQueueManager();
-        const stats = await manager.getStats();
-        setPendingCount(stats.pending);
+        const stats = await getDBStats();
+        setPendingCount(stats.reportesOffline);
       } catch (error) {
         console.error('[SyncBadge] Failed to load count:', error);
       }
@@ -236,17 +228,9 @@ export function useSyncStatus() {
   React.useEffect(() => {
     const loadStatus = async () => {
       try {
-        const manager = getSyncQueueManager();
-        const queueStats = await manager.getStats();
-
-        setStats({
-          informes: { total: 0, pending: queueStats.pending, error: queueStats.failed, synced: queueStats.completed },
-          syncQueue: { total: queueStats.total, pending: queueStats.pending, failed: queueStats.failed },
-          referenceData: { total: 0, expired: 0 },
-          storage: { used: 0, available: 0, quota: 0 }
-        });
-
-        setIsSyncing(manager.isCurrentlyProcessing());
+        const dbStats = await getDBStats();
+        setStats(dbStats);
+        setIsSyncing(false); // Ya no hay sync processing
       } catch (error) {
         console.error('[useSyncStatus] Failed to load status:', error);
       }
@@ -260,7 +244,7 @@ export function useSyncStatus() {
   return {
     stats,
     isSyncing,
-    hasPendingSync: (stats?.syncQueue.pending ?? 0) > 0,
-    hasErrors: (stats?.syncQueue.failed ?? 0) > 0,
+    hasPendingSync: (stats?.reportesOffline ?? 0) > 0,
+    hasErrors: false, // Ya no trackeamos errores específicos
   };
 }

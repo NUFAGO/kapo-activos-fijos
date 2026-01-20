@@ -22,7 +22,8 @@ export function useActivosFijos(input?: ActivosFijosPaginationInput) {
         page: input?.page || 1,
         itemsPage: input?.itemsPage || 20,
         searchTerm: input?.searchTerm,
-        filterRangeDate: input?.filterRangeDate
+        filterRangeDate: input?.filterRangeDate,
+        filter: input?.filter
       };
 
       const response = await executeQuery<{ listActivosFijosPaginados: ActivosFijosPaginationResult }>(

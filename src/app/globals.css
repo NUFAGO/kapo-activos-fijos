@@ -161,6 +161,11 @@ button[disabled] {
   cursor: not-allowed;
 }
 
+/* Cursor de texto (caret) visible en inputs */
+input {
+  caret-color: var(--text-primary);
+}
+
 /* Cursor de texto (caret) en TODOS los elementos */
 * {
   caret-color: transparent;

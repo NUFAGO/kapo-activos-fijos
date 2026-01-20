@@ -78,6 +78,9 @@ export default function ReporteActivosFijosOfflinePage() {
   // Estado del recurso que se está buscando
   const [recursoSeleccionado, setRecursoSeleccionado] = useState<string | null>(null);
 
+  // Key para forzar re-renderizado del SelectSearch cuando se limpia
+  const [searchKey, setSearchKey] = useState(0);
+
   // Almacenar recursos completos para poder usarlos al seleccionar
   const recursosCompletosRef = useRef<Map<string, any>>(new Map());
 
@@ -173,6 +176,7 @@ export default function ReporteActivosFijosOfflinePage() {
     return () => {
       setRecursoSeleccionado(null);
       setOpcionesFiltradas([]); // Limpiar opciones filtradas solo al cerrar modal
+      setSearchKey(0); // Resetear la key del SelectSearch
       recursosCompletosRef.current.clear();
     };
   }, []);
@@ -214,6 +218,8 @@ export default function ReporteActivosFijosOfflinePage() {
 
     setRecursosSeleccionados(prev => [...prev, nuevoRecurso]);
     setRecursoSeleccionado(null);
+    setOpcionesFiltradas([]); // Limpiar opciones filtradas para resetear el componente
+    setSearchKey(prev => prev + 1); // Forzar re-renderizado del SelectSearch
     toast.success('Recurso agregado al reporte');
   };
 
@@ -351,12 +357,14 @@ export default function ReporteActivosFijosOfflinePage() {
       // Guardar en IndexedDB (NO sincroniza automáticamente)
       const reporteId = await saveOfflineReport(reporteFinal);
 
-      toast.success(`✅ Reporte guardado offline (ID: ${reporteId})`);
+      toast.success(`Reporte guardado offline (ID: ${reporteId})`);
 
 
       // Resetear formulario
       setRecursosSeleccionados([]);
       setRecursoSeleccionado(null);
+      setOpcionesFiltradas([]);
+      setSearchKey(0);
 
     } catch (error) {
       console.error('Error al guardar reporte offline:', error);
@@ -418,6 +426,7 @@ export default function ReporteActivosFijosOfflinePage() {
               <div className="flex gap-2">
                 <div className="flex-1">
                   <SelectSearch
+                    key={searchKey}
                     value={recursoSeleccionado}
                     onChange={(recursoId) => {
                       setRecursoSeleccionado(recursoId);
@@ -579,6 +588,8 @@ export default function ReporteActivosFijosOfflinePage() {
                 onClick={() => {
                   setRecursosSeleccionados([]);
                   setRecursoSeleccionado(null);
+                  setOpcionesFiltradas([]);
+                  setSearchKey(0);
                 }}
                 className="px-4 py-2 bg-[var(--background)]/50 hover:bg-[var(--background)]/70 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] shadow-sm hover:shadow transition-all duration-200 rounded-lg"
               >

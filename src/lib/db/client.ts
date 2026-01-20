@@ -4,73 +4,15 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import type { DBStats } from './schema';
 
 // Versionado de la base de datos
 const DB_NAME = 'activos-fijos-db';
-const DB_VERSION = 3;
+const DB_VERSION = 4; // Incrementado para limpieza de tablas no usadas
 
 // Esquema de la base de datos
 interface ActivosFijosDB extends DBSchema {
-  // Datos de informes (para edición offline)
-  informes: {
-    key: string;
-    value: {
-      id: string;
-      data: any;
-      lastModified: number;
-      syncStatus: 'pending' | 'synced' | 'error';
-      version: number;
-    };
-    indexes: {
-      syncStatus: string;
-      lastModified: number;
-    };
-  };
-
-  // Queue de sincronización
-  syncQueue: {
-    key: string;
-    value: {
-      id: string;
-      entityId: string;
-      entityType: 'informe' | 'proyecto' | 'maquinaria';
-      operation: 'create' | 'update' | 'delete';
-      endpoint: string;
-      method: 'POST' | 'PUT' | 'DELETE';
-      payload: any;
-      status: 'pending' | 'processing' | 'completed' | 'failed';
-      retryCount: number;
-      maxRetries: number;
-      createdAt: number;
-      updatedAt: number;
-      timestamp: number;
-      lastAttempt?: number;
-      nextRetryAt?: number;
-      errorMessage?: string;
-      errorCode?: string;
-      priority: string;
-    };
-    indexes: {
-      timestamp: number;
-      type: string;
-    };
-  };
-
-  // Cache de datos de referencia (solo lectura)
-  referenceData: {
-    key: string;
-    value: {
-      key: string;
-      data: any;
-      expiresAt: number;
-      version: number;
-    };
-    indexes: {
-      expiresAt: number;
-    };
-  };
-
-  // Configuración de la app
+  // Configuración de la app (timestamps de sync, etc.)
   appConfig: {
     key: string;
     value: {
@@ -161,10 +103,9 @@ export async function getDB(): Promise<IDBPDatabase<ActivosFijosDB>> {
       upgrade(db, oldVersion, newVersion, transaction) {
         console.log(`[IndexedDB] Upgrading from v${oldVersion} to v${newVersion}`);
 
-        // ✅ SISTEMA DINÁMICO: Verificar y crear todas las tablas necesarias
-        // No importa la versión, siempre se asegura que todas las tablas existan
+        // ✅ LIMPIEZA: Solo crear tablas que REALMENTE se usan
 
-        // 1. Tabla de recursos (PRIORIDAD ALTA)
+        // 1. Tabla de recursos (PRIORIDAD ALTA - ACTIVA)
         if (!db.objectStoreNames.contains('recursos')) {
           console.log('[IndexedDB] 🚀 Creating recursos table (REQUIRED)');
           const recursosStore = db.createObjectStore('recursos', {
@@ -179,41 +120,27 @@ export async function getDB(): Promise<IDBPDatabase<ActivosFijosDB>> {
           console.log('[IndexedDB] ℹ️ Recursos table already exists');
         }
 
-        // 2. Tabla de informes
-        if (!db.objectStoreNames.contains('informes')) {
-          console.log('[IndexedDB] Creating informes table');
-          const informesStore = db.createObjectStore('informes', {
-            keyPath: 'id'
-          });
-          informesStore.createIndex('syncStatus', 'syncStatus');
-          informesStore.createIndex('lastModified', 'lastModified');
-        }
-
-        // 3. Queue de sincronización
-        if (!db.objectStoreNames.contains('syncQueue')) {
-          console.log('[IndexedDB] Creating syncQueue table');
-          const syncStore = db.createObjectStore('syncQueue', {
-            keyPath: 'id'
-          });
-          syncStore.createIndex('timestamp', 'timestamp');
-          syncStore.createIndex('type', 'type');
-        }
-
-        // 4. Datos de referencia
-        if (!db.objectStoreNames.contains('referenceData')) {
-          console.log('[IndexedDB] Creating referenceData table');
-          const refStore = db.createObjectStore('referenceData', {
-            keyPath: 'key'
-          });
-          refStore.createIndex('expiresAt', 'expiresAt');
-        }
-
-        // 5. Configuración
+        // 2. Configuración de la app (ACTIVA)
         if (!db.objectStoreNames.contains('appConfig')) {
           console.log('[IndexedDB] Creating appConfig table');
           db.createObjectStore('appConfig', {
             keyPath: 'key'
           });
+        }
+
+        // 3. Reportes offline (ACTIVA - se crea después)
+        if (!db.objectStoreNames.contains('reportesOffline')) {
+          console.log('[IndexedDB] 🚀 Creating reportesOffline table (v4)');
+          const reportesStore = db.createObjectStore('reportesOffline', {
+            keyPath: 'id'
+          });
+          reportesStore.createIndex('sync_status', 'sync_status');
+          reportesStore.createIndex('fecha_creacion', 'fecha_creacion');
+          reportesStore.createIndex('usuario_id', 'usuario_id');
+          reportesStore.createIndex('fecha_sincronizacion', 'fecha_sincronizacion');
+          console.log('[IndexedDB] ✅ ReportesOffline table created successfully');
+        } else {
+          console.log('[IndexedDB] ℹ️ ReportesOffline table already exists');
         }
 
         // 6. Reportes offline (v3)
@@ -279,12 +206,19 @@ export async function clearDatabase(): Promise<void> {
     console.log('[IndexedDB] Clearing entire database...');
 
     const db = await getDB();
-    const stores = Array.from(db.objectStoreNames);
+    // Solo limpiar las tablas que existen y se usan
+    const activeStores: Array<'appConfig' | 'recursos' | 'reportesOffline'> = ['appConfig', 'recursos', 'reportesOffline'];
+    const existingStores = activeStores.filter(storeName => db.objectStoreNames.contains(storeName));
 
-    const transaction = db.transaction(stores, 'readwrite');
+    if (existingStores.length === 0) {
+      console.log('[IndexedDB] No active stores to clear');
+      return;
+    }
+
+    const transaction = db.transaction(existingStores, 'readwrite');
 
     await Promise.all(
-      stores.map(storeName => {
+      existingStores.map(storeName => {
         const store = transaction.objectStore(storeName);
         return store.clear();
       })
@@ -302,21 +236,15 @@ export async function clearDatabase(): Promise<void> {
 /**
  * Obtener estadísticas de la base de datos
  */
-export async function getDBStats(): Promise<{
-  informes: number;
-  syncQueue: number;
-  referenceData: number;
-  appConfig: number;
-  storageEstimate?: { quota?: number; usage?: number };
-}> {
+export async function getDBStats(): Promise<DBStats> {
   try {
     const db = await getDB();
 
-    const [informesCount, syncQueueCount, referenceDataCount, appConfigCount] = await Promise.all([
-      db.count('informes'),
-      db.count('syncQueue'),
-      db.count('referenceData'),
-      db.count('appConfig'),
+    // Solo contamos las tablas que existen
+    const [appConfigCount, recursosCount, reportesOfflineCount] = await Promise.all([
+      db.count('appConfig').catch(() => 0),
+      db.count('recursos').catch(() => 0),
+      db.count('reportesOffline').catch(() => 0),
     ]);
 
     // Estimación de storage (si está disponible)
@@ -326,11 +254,15 @@ export async function getDBStats(): Promise<{
     }
 
     return {
-      informes: informesCount,
-      syncQueue: syncQueueCount,
-      referenceData: referenceDataCount,
+      // Estadísticas simplificadas - solo tablas activas
       appConfig: appConfigCount,
-      storageEstimate,
+      recursos: recursosCount,
+      reportesOffline: reportesOfflineCount,
+      storage: {
+        used: storageEstimate?.usage || 0,
+        available: (storageEstimate?.quota || 0) - (storageEstimate?.usage || 0),
+        quota: storageEstimate?.quota || 0,
+      },
     };
 
   } catch (error) {
@@ -381,14 +313,12 @@ export async function ensureTablesExist(): Promise<void> {
 
     const db = await getDB();
 
-    // Verificar cada tabla individualmente (evita problemas de tipos)
+    // Verificar solo las tablas que realmente usamos
     const missingTables: string[] = [];
 
     if (!db.objectStoreNames.contains('recursos')) missingTables.push('recursos');
-    if (!db.objectStoreNames.contains('informes')) missingTables.push('informes');
-    if (!db.objectStoreNames.contains('syncQueue')) missingTables.push('syncQueue');
-    if (!db.objectStoreNames.contains('referenceData')) missingTables.push('referenceData');
     if (!db.objectStoreNames.contains('appConfig')) missingTables.push('appConfig');
+    if (!db.objectStoreNames.contains('reportesOffline')) missingTables.push('reportesOffline');
 
     if (missingTables.length === 0) {
       console.log('[IndexedDB] ✅ All required tables exist');
@@ -411,7 +341,7 @@ export async function ensureTablesExist(): Promise<void> {
       upgrade(db, oldVersion, newVersion, transaction) {
         console.log(`[IndexedDB] 🚀 Force upgrade from v${oldVersion} to v${newVersion}`);
 
-        // Crear tablas faltantes
+        // Crear solo las tablas que realmente usamos
         if (!db.objectStoreNames.contains('recursos')) {
           console.log('[IndexedDB] Creating missing table: recursos');
           const recursosStore = db.createObjectStore('recursos', { keyPath: 'id' });
@@ -420,29 +350,6 @@ export async function ensureTablesExist(): Promise<void> {
           recursosStore.createIndex('activo_fijo', 'activo_fijo');
           recursosStore.createIndex('expiresAt', 'expiresAt');
           console.log('[IndexedDB] ✅ Created table: recursos');
-        }
-
-        if (!db.objectStoreNames.contains('informes')) {
-          console.log('[IndexedDB] Creating missing table: informes');
-          const informesStore = db.createObjectStore('informes', { keyPath: 'id' });
-          informesStore.createIndex('syncStatus', 'syncStatus');
-          informesStore.createIndex('lastModified', 'lastModified');
-          console.log('[IndexedDB] ✅ Created table: informes');
-        }
-
-        if (!db.objectStoreNames.contains('syncQueue')) {
-          console.log('[IndexedDB] Creating missing table: syncQueue');
-          const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-          syncStore.createIndex('timestamp', 'timestamp');
-          syncStore.createIndex('type', 'type');
-          console.log('[IndexedDB] ✅ Created table: syncQueue');
-        }
-
-        if (!db.objectStoreNames.contains('referenceData')) {
-          console.log('[IndexedDB] Creating missing table: referenceData');
-          const refStore = db.createObjectStore('referenceData', { keyPath: 'key' });
-          refStore.createIndex('expiresAt', 'expiresAt');
-          console.log('[IndexedDB] ✅ Created table: referenceData');
         }
 
         if (!db.objectStoreNames.contains('appConfig')) {

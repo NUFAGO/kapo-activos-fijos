@@ -261,10 +261,14 @@ export function useCreateReporteActivoFijo() {
     onSuccess: (data, variables) => {
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['reportes-activos-fijos'] });
+      queryClient.invalidateQueries({ queryKey: ['reportes-paginados'] });
       queryClient.invalidateQueries({ queryKey: ['reportes-by-usuario', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['estadisticas-reportes'] });
-      // Invalidar TODAS las queries de activos fijos (incluyendo todas las páginas y filtros)
+
+      // Invalidar TODAS las queries relacionadas con activos fijos
+      // (activos-fijos, recursos-activos-fijos, etc.)
       queryClient.invalidateQueries({ queryKey: ['activos-fijos'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['recursos-activos-fijos'], exact: false });
 
       // Solo mostrar toast si NO es sincronización offline
       if (!variables?.esSincronizacionOffline) {

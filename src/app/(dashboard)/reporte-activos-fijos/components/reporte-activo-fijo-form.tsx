@@ -49,6 +49,9 @@ export default function ReporteActivoFijoForm({
   // Estado del recurso que se está buscando
   const [recursoSeleccionado, setRecursoSeleccionado] = useState<string | null>(null);
 
+  // Key para forzar re-renderizado del SelectSearch cuando se limpia
+  const [searchKey, setSearchKey] = useState(0);
+
   // Ya no necesitamos el ref, usamos las opciones directamente
 
   // Hooks
@@ -139,6 +142,7 @@ export default function ReporteActivoFijoForm({
     if (!isOpen) {
       setRecursoSeleccionado(null);
       setOpcionesBusqueda([]); // Limpiar opciones de búsqueda solo al cerrar modal
+      setSearchKey(0); // Resetear la key del SelectSearch
     }
   }, [isOpen]);
 
@@ -204,6 +208,8 @@ export default function ReporteActivoFijoForm({
 
     setRecursosSeleccionados(prev => [...prev, nuevoRecurso]);
     setRecursoSeleccionado(null);
+    setOpcionesBusqueda([]); // Limpiar opciones de búsqueda para resetear el componente
+    setSearchKey(prev => prev + 1); // Forzar re-renderizado del SelectSearch
     toast.success('Recurso agregado al reporte');
   };
 
@@ -330,6 +336,8 @@ export default function ReporteActivoFijoForm({
       // Resetear formulario
       setRecursosSeleccionados([]);
       setRecursoSeleccionado(null);
+      setOpcionesBusqueda([]);
+      setSearchKey(0);
       onClose();
 
     } catch (error) {
@@ -342,6 +350,8 @@ export default function ReporteActivoFijoForm({
     if (!createReporteMutation.isPending) {
       setRecursosSeleccionados([]);
       setRecursoSeleccionado(null);
+      setOpcionesBusqueda([]);
+      setSearchKey(0);
       onClose();
     }
   };
@@ -422,6 +432,7 @@ export default function ReporteActivoFijoForm({
           <div className="flex gap-2">
             <div className="flex-1">
               <SelectSearch
+                key={searchKey}
                 value={recursoSeleccionado}
                 onChange={(recursoId) => {
                   setRecursoSeleccionado(recursoId);
@@ -490,15 +501,15 @@ export default function ReporteActivoFijoForm({
                           <AlertTriangle className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                        <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                             Estado del Recurso *
-                          </label>
-                          <Select
-                            value={recurso.status}
-                            onChange={(value) => actualizarStatus(recurso.id, value as RecursoSeleccionado['status'])}
-                            options={ESTADOS_DISPONIBLES}
+                        </label>
+                        <Select
+                          value={recurso.status}
+                          onChange={(value) => actualizarStatus(recurso.id, value as RecursoSeleccionado['status'])}
+                          options={ESTADOS_DISPONIBLES}
                             placeholder="Seleccionar estado"
-                          />
+                        />
                         </div>
                       </div>
 
@@ -508,23 +519,23 @@ export default function ReporteActivoFijoForm({
                           <Camera className="h-3 w-3 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="flex-1">
-                          <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                        <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                             Evidencias Fotográficas * (1-3 fotos)
-                          </label>
-                          <div className="space-y-1">
-                            <input
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              onChange={(e) => manejarFotos(recurso.id, e.target.files)}
+                        </label>
+                        <div className="space-y-1">
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => manejarFotos(recurso.id, e.target.files)}
                               className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300 dark:hover:file:bg-blue-900/50 file:cursor-pointer file:transition-colors"
-                            />
-                            {recurso.fotos.length > 0 && (
+                          />
+                          {recurso.fotos.length > 0 && (
                               <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
                                 <CheckCircle className="h-3 w-3" />
                                 <span>{recurso.fotos.length} foto{recurso.fotos.length !== 1 ? 's' : ''} seleccionada{recurso.fotos.length !== 1 ? 's' : ''}</span>
-                              </div>
-                            )}
+                            </div>
+                          )}
                           </div>
                         </div>
                       </div>
@@ -543,21 +554,21 @@ export default function ReporteActivoFijoForm({
                           }`} />
                         </div>
                         <div className="flex-1">
-                          <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                            Descripción {(recurso.status === 'Observado' || recurso.status === 'Inoperativo') && <span className="text-red-500">*</span>}
-                          </label>
-                          <Textarea
-                            value={recurso.descripcion}
-                            onChange={(e) => actualizarDescripcion(recurso.id, e.target.value)}
+                        <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                          Descripción {(recurso.status === 'Observado' || recurso.status === 'Inoperativo') && <span className="text-red-500">*</span>}
+                        </label>
+                        <Textarea
+                          value={recurso.descripcion}
+                          onChange={(e) => actualizarDescripcion(recurso.id, e.target.value)}
                             placeholder={
                               recurso.status === 'Observado' ? "Describa la observación encontrada..." :
                               recurso.status === 'Inoperativo' ? "Explique por qué está inoperativo..." :
                               "Notas adicionales (opcional)..."
-                            }
+                          }
                             rows={2}
-                            className="text-xs resize-none"
-                            required={recurso.status === 'Observado' || recurso.status === 'Inoperativo'}
-                          />
+                          className="text-xs resize-none"
+                          required={recurso.status === 'Observado' || recurso.status === 'Inoperativo'}
+                        />
                         </div>
                       </div>
                     </div>

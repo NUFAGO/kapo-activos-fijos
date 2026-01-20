@@ -1,14 +1,4 @@
-/**
- * 🎣 HOOKS - LÓGICA DE DATOS Y ESTADO
- *
- * Responsabilidad: Centralizar custom hooks para manejo de datos
- * Flujo: Importado por componentes → Conecta con GraphQL/Backend
- *
- * Contiene:
- * - useAuth: Autenticación y usuario (viene de context)
- * - [Futuro] useActivos: Gestión de activos fijos
- * - [Futuro] useCategorias: Categorías de activos
- */
+
 
 // Hooks de autenticación (viene del context)
 export { useAuth } from '@/context/auth-context';
@@ -28,6 +18,10 @@ export {
 
 // Hooks de activos fijos
 export { useActivosFijos, useActivoFijo } from './useActivosFijos';
+
+// Hooks de obras y bodegas
+export { useObras } from './useObras';
+export { useBodegas } from './useBodegas';
 
 // Hooks de recursos activos fijos
 export { useRecursosActivosFijos, useRecursosActivosFijosOptions } from './useRecursosActivosFijos';

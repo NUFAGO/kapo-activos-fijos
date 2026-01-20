@@ -8,12 +8,14 @@ export const LIST_ACTIVOS_FIJOS_PAGINADOS_QUERY = `
     $itemsPage: Int
     $searchTerm: String
     $filterRangeDate: FilterRangeDateInput
+    $filter: ActivosFijosFilterInput
   ) {
     listActivosFijosPaginados(input: {
       page: $page
       itemsPage: $itemsPage
       searchTerm: $searchTerm
       filterRangeDate: $filterRangeDate
+      filter: $filter
     }) {
       info {
         page
@@ -43,7 +45,6 @@ export const LIST_ACTIVOS_FIJOS_PAGINADOS_QUERY = `
         descripcion_recurso
         fecha_recurso
         vigente_recurso
-        usado_recurso
           tipo_recurso_id
           clasificacion_recurso_id
           estado_recurso_almacen
