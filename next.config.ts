@@ -40,28 +40,53 @@ const nextConfig: NextConfig = {
           skipWaiting: true,
           clientsClaim: true,
 
-          // Runtime caching - más seguro que precaching
+          // PRECACHE: Solo páginas offline y sus subrutas
+          additionalManifestEntries: [
+            { url: '/offline', revision: null },
+            { url: '/offline/reporte-activos-fijos', revision: null },
+            { url: '/offline/gestion-reportes', revision: null },
+            // Assets estáticos necesarios para offline
+            { url: '/manifest.json', revision: null },
+            { url: '/favicon.ico', revision: null },
+          ],
+
+          // Runtime caching
           runtimeCaching: [
+            // Páginas offline - NetworkFirst con fallback a cache
             {
-              urlPattern: /^https?.*/,
+              urlPattern: /^https?:\/\/[^\/]+\/offline/,
               handler: 'NetworkFirst',
               options: {
-                cacheName: 'activos-fijos-runtime',
+                cacheName: 'activos-fijos-offline-pages',
                 expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 24 * 60 * 60, // 24 horas
+                  maxEntries: 20,
+                  maxAgeSeconds: 7 * 24 * 60 * 60, // 7 días
                 },
-                cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
-                  // Evitar cachear requests con auth
-                  if (request.headers.get('authorization')) {
-                    return undefined;
-                  }
-                  return request.url;
+                networkTimeoutSeconds: 3,
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            // Páginas ONLINE - NetworkOnly (nunca cachear)
+            {
+              urlPattern: /^https?:\/\/[^\/]+\/(?!offline|api|graphql|_next\/static).*$/,
+              handler: 'NetworkOnly',
+            },
+            // Assets estáticos de Next.js (necesarios para que funcione offline)
+            {
+              urlPattern: /^https?:\/\/[^\/]+\/_next\/static\//,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'activos-fijos-static',
+                expiration: {
+                  maxEntries: 200,
+                  maxAgeSeconds: 365 * 24 * 60 * 60, // 1 año
                 },
               },
             },
             {
-              // Cache agresivo para assets estáticos
+              // Cache para imágenes
               urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
               handler: 'CacheFirst',
               options: {
@@ -96,14 +121,6 @@ const nextConfig: NextConfig = {
             /^manifest.*\.js$/,
             /_next\/static\/.*\.hot-update\.js$/,
             /_next\/static\/development/,
-          ],
-
-          // Additional manifest entries
-          additionalManifestEntries: [
-            {
-              url: '/offline',
-              revision: '1',
-            },
           ],
         })
       );
