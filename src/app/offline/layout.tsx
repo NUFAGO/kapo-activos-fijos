@@ -197,6 +197,7 @@ function OfflineSidebar({
                   height={40}
                   className="h-10 w-10 object-contain"
                   priority
+                  unoptimized
                 />
               </div>
             ) : (
@@ -209,6 +210,7 @@ function OfflineSidebar({
                     height={35}
                     className="h-8 w-auto object-contain"
                     priority
+                    unoptimized
                   />
                 </div>
                 <span className="text-[10px] font-medium text-center leading-tight text-gray-700">

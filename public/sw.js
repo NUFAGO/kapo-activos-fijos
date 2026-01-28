@@ -141,7 +141,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Para assets estáticos (CSS, JS, imágenes, fonts): CacheFirst
-  if (event.request.url.match(/\.(css|js|png|jpg|jpeg|svg|ico|woff|woff2)$/) ||
+  if (event.request.url.match(/\.(css|js|png|jpg|jpeg|svg|gif|webp|ico|woff|woff2)$/) ||
       pathname.startsWith('/_next/static/')) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
