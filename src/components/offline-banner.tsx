@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { WifiOff, Wifi, AlertTriangle } from 'lucide-react';
 import { useOnline } from '@/hooks';
 
@@ -29,24 +30,31 @@ export function OfflineBanner({
   // Memoizar la condición de conexión para estabilidad
   const hasConnectionIssue = useMemo(() => isOffline || isSlow || isUnstable, [isOffline, isSlow, isUnstable]);
 
-  // Controlar visibilidad del banner con temporizador de 4 segundos
+  const BANNER_SHOWN_KEY = 'offline-banner-shown';
+
+  // Mostrar solo UNA VEZ por periodo offline, luego desaparece a los 4s. No volver a mostrar al navegar.
   useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-    if (hasConnectionIssue && !isVisible) {
-      // Mostrar banner inmediatamente cuando se detecta problema de conexión
-      setIsVisible(true);
-
-      // Ocultar automáticamente después de 4 segundos
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-      }, 4000);
-
-      return () => clearTimeout(timer);
-    } else if (!hasConnectionIssue) {
-      // Ocultar inmediatamente si se recupera la conexión
+    if (!hasConnectionIssue) {
+      sessionStorage.removeItem(BANNER_SHOWN_KEY);
       setIsVisible(false);
+      return;
     }
-  }, [isOffline, isSlow, isUnstable]); // Removí isVisible de las dependencias
+
+    if (sessionStorage.getItem(BANNER_SHOWN_KEY)) {
+      return; // Ya se mostró en este periodo offline; no volver a mostrar al navegar
+    }
+
+    setIsVisible(true);
+    sessionStorage.setItem(BANNER_SHOWN_KEY, '1');
+
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [hasConnectionIssue]);
 
   if (!isVisible) {
     return null;
@@ -142,12 +150,17 @@ export function useOfflineBanner() {
 
 /**
  * Componente wrapper que muestra el banner automáticamente
- * Útil para layouts globales
+ * Útil para layouts globales.
+ * No se muestra en rutas /offline: el layout offline ya indica "Sin conexión" y evita que reaparezca al navegar.
  */
 export function GlobalOfflineBanner({ compact = false }: { compact?: boolean }) {
+  const pathname = usePathname();
   const { shouldShow } = useOfflineBanner();
 
   if (!shouldShow) {
+    return null;
+  }
+  if (pathname?.startsWith('/offline')) {
     return null;
   }
 
