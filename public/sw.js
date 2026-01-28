@@ -20,6 +20,7 @@ const CACHE_NAME = 'activos-fijos-dev-cache-v1';
 // Solo cachear páginas offline y assets estáticos necesarios
 const OFFLINE_PAGES = [
   '/offline',
+  '/offline/recursos-af',
   '/offline/reporte-activos-fijos',
   '/offline/gestion-reportes',
 ];

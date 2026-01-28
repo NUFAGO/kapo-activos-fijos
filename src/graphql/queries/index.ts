@@ -17,3 +17,14 @@ export {
   LIST_REPORTES_PAGINADOS_QUERY
 } from './activos-fijos.queries';
 
+// Queries para unidades
+export {
+  LIST_UNIDADES_QUERY
+} from './unidades.queries';
+
+// Queries para clasificaciones
+export {
+  LIST_CLASIFICACIONES_RECURSO_QUERY,
+  LIST_CLASIFICACIONES_BY_PARENT_QUERY
+} from './clasificaciones.queries';
+

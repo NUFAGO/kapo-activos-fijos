@@ -232,10 +232,11 @@ function ActivosFijosContent() {
           </div>
         ) : activos.length > 0 ? (
           <>
-            {/* Tabla */}
+            {/* Tabla - contenedor extra como recursos-af */}
             <div className="bg-[var(--background)] backdrop-blur-sm rounded-lg card-shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="p-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
                   <thead className="bg-[var(--surface)] border-b border-[var(--border)] table-header-shadow">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">
@@ -266,7 +267,7 @@ function ActivosFijosContent() {
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {activos.map((activo) => (
-                      <tr key={`${activo.id_recurso}-${activo.id_bodega}`} className="hover:bg-[var(--hover)] ">
+                      <tr key={`${activo.id_recurso}-${activo.id_bodega}`} className="border-b border-[var(--border)] hover:bg-[var(--hover-bg)] transition-colors duration-150">
                         <td className="px-4 py-3 text-xs text-[var(--text-primary)] font-medium w-10">
                           {activo.codigo_recurso}
                         </td>
@@ -320,6 +321,7 @@ function ActivosFijosContent() {
                     ))}
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
 

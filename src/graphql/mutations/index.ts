@@ -15,3 +15,8 @@ export {
   UPDATE_REPORTE_ACTIVO_FIJO_MUTATION,
   DELETE_REPORTE_ACTIVO_FIJO_MUTATION,
 } from './activos-fijos.mutations';
+
+// Exportar mutations de recursos
+export {
+  CREATE_RECURSOS_FROM_OFFLINE_MUTATION,
+} from './recursos.mutations';

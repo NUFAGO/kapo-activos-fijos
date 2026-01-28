@@ -26,6 +26,10 @@ export { useBodegas } from './useBodegas';
 // Hooks de recursos activos fijos
 export { useRecursosActivosFijos, useRecursosActivosFijosOptions } from './useRecursosActivosFijos';
 
+// Hooks offline para unidades y clasificaciones
+export { useUnidadesOffline, useUnidadesOfflineOptions } from './useUnidadesOffline';
+export { useClasificacionesOffline, useClasificacionesOfflineJerarquicas } from './useClasificacionesOffline';
+
 // Hooks de reportes de activos fijos
 export {
   useReportesActivosFijos,

@@ -9,6 +9,8 @@ export interface SelectOption {
   value: string;
   label: string;
   color?: string;
+  disabled?: boolean;
+  style?: React.CSSProperties;
 }
 
 export interface SelectProps {
@@ -268,29 +270,38 @@ export function Select({
                 
                 // Si hay renderOption personalizado, usarlo
                 if (renderOption) {
+                  const isDisabled = option.disabled || false;
                   return (
-                    <div key={option.value}>
-                      {renderOption(option, isSelected, onSelect)}
+                    <div key={option.value} className={cn(isDisabled && 'cursor-not-allowed opacity-60')}>
+                      {renderOption(option, isSelected, isDisabled ? () => {} : onSelect)}
                     </div>
                   );
                 }
                 
                 // Renderizado estándar
+                const isDisabled = option.disabled || false;
+                const optionStyle = {
+                  ...option.style,
+                  color: isSelected ? 'var(--text-primary)' : option.style?.color || 'var(--text-primary)',
+                  backgroundColor: isSelected ? 'var(--active-bg)' : 'transparent',
+                  opacity: isDisabled ? 0.6 : 1,
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                };
+
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={onSelect}
+                    onClick={isDisabled ? undefined : onSelect}
+                    disabled={isDisabled}
                     className={cn(
                       'w-full px-3 py-2 text-left text-xs text-[var(--text-primary)] transition-colors',
-                      isSelected 
-                        ? 'bg-[var(--active-bg)] font-medium' 
-                        : 'hover:bg-[var(--hover-bg)]'
+                      isSelected
+                        ? 'bg-[var(--active-bg)] font-medium'
+                        : !isDisabled && 'hover:bg-[var(--hover-bg)]',
+                      isDisabled && 'cursor-not-allowed opacity-60'
                     )}
-                    style={{
-                      color: 'var(--text-primary)',
-                      backgroundColor: isSelected ? 'var(--active-bg)' : 'transparent',
-                    }}
+                    style={optionStyle}
                   >
                     {option.label}
                   </button>

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { SelectSearch } from '@/components/ui/select-search';
@@ -86,6 +88,7 @@ export default function ReporteActivosFijosOfflinePage() {
 
   // Hooks
   const { user } = useAuth();
+  const router = useRouter();
 
 
   // Estado para todas las opciones disponibles (cargadas desde IndexedDB)
@@ -359,12 +362,14 @@ export default function ReporteActivosFijosOfflinePage() {
 
       toast.success(`Reporte guardado offline (ID: ${reporteId})`);
 
-
       // Resetear formulario
       setRecursosSeleccionados([]);
       setRecursoSeleccionado(null);
       setOpcionesFiltradas([]);
       setSearchKey(0);
+
+      // Redirigir a gestión de reportes
+      router.push('/offline/gestion-reportes');
 
     } catch (error) {
       console.error('Error al guardar reporte offline:', error);
@@ -416,7 +421,7 @@ export default function ReporteActivosFijosOfflinePage() {
             </div>
 
             {/* Buscador de recursos - ALTURA FIJA */}
-            <div className="space-y-1 pb-2 px-4 flex-shrink-0">
+            <div className="flex flex-col space-y-2 pb-1 px-4 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-[var(--text-primary)]">
                   Buscar Recursos
@@ -448,6 +453,15 @@ export default function ReporteActivosFijosOfflinePage() {
                   Agregar
                 </button>
               </div>
+              <p className="text-xs text-[var(--text-secondary)] flex-grow flex items-center py-1">
+                ¿No encuentras un recurso?{' '}
+                <Link
+                  href="/offline/recursos-af"
+                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium ml-2"
+                >
+                  Crear recurso
+                </Link>
+              </p>
             </div>
 
             {/* Área expandible - OCUPA TODO EL RESTO */}

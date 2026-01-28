@@ -228,17 +228,21 @@ function ReporteRecursosContent() {
         </div>
       </div>
 
-      {/* Estadísticas rápidas */}
-      <div className="bg-[var(--background)] backdrop-blur-sm rounded-lg card-shadow p-3">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="text-center">
-            <div className="text-sm font-bold text-[var(--text-primary)]">{estadisticas.totalReportes}</div>
-            <div className="text-[10px] text-[var(--text-secondary)]">Reportes</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm font-bold text-blue-600">{estadisticas.totalRecursos}</div>
-            <div className="text-[10px] text-[var(--text-secondary)]">Recursos Evaluados</div>
-          </div>
+      {/* Estadísticas - separadas como recursos-af */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[var(--background)] backdrop-blur-sm rounded card-shadow p-2.5 flex items-center justify-center sm:justify-between gap-1">
+          <FileText className="h-3 w-3 text-[var(--text-secondary)]" />
+          <span className="hidden sm:inline text-xs text-[var(--text-primary)]">Reportes</span>
+          <span className="text-xs font-semibold text-[var(--text-primary)]">
+            {estadisticas.totalReportes}
+          </span>
+        </div>
+        <div className="bg-[var(--background)] backdrop-blur-sm rounded card-shadow p-2.5 flex items-center justify-center sm:justify-between gap-1">
+          <Package className="h-3 w-3 text-[var(--text-secondary)]" />
+          <span className="hidden sm:inline text-xs text-[var(--text-primary)]">Recursos evaluados</span>
+          <span className="text-xs font-semibold text-[var(--text-primary)]">
+            {estadisticas.totalRecursos}
+          </span>
         </div>
       </div>
 
@@ -257,10 +261,11 @@ function ReporteRecursosContent() {
           </div>
         ) : filteredReportes.length > 0 ? (
           <>
-            {/* Tabla */}
+            {/* Tabla - contenedor extra como recursos-af / activos-fijos */}
             <div className="bg-[var(--background)] backdrop-blur-sm rounded-lg card-shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="p-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
                   <thead className="bg-[var(--surface)] border-b border-[var(--border)] table-header-shadow">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">
@@ -288,7 +293,7 @@ function ReporteRecursosContent() {
                   </thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {filteredReportes.map((reporte) => (
-                      <tr key={reporte._id} className="hover:bg-[var(--hover)]">
+                      <tr key={reporte._id} className="border-b border-[var(--border)] hover:bg-[var(--hover-bg)] transition-colors duration-150">
                         <td className="px-4 py-3 text-xs text-[var(--text-primary)] font-medium">
                           {reporte.id_reporte}
                         </td>
@@ -340,6 +345,7 @@ function ReporteRecursosContent() {
                     ))}
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
 

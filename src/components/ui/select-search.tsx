@@ -60,19 +60,22 @@ export function SelectSearch({
   // Sincronizar inputValue con value cuando cambia externamente
   // Si hay una opción seleccionada, mostrar su label
   // Si no hay selección y hay message, mostrar el message cuando está cerrado
-  // Si está abierto, mantener vacío para búsqueda
+  // Si está abierto, permitir edición libre (no forzar sincronización)
   useEffect(() => {
-    if (selectedOption) {
-      setInputValue(selectedOption.label);
-    } else if (isOpen) {
-      // Cuando está abierto, mantener vacío para búsqueda (no cambiar si ya tiene algo)
+    // Solo sincronizar cuando NO está abierto el dropdown
+    if (!isOpen) {
+      if (selectedOption) {
+        setInputValue(selectedOption.label);
+      } else if (message && (value == null || value === '')) {
+        setInputValue(message);
+      }
+    } else {
+      // Cuando está abierto, solo limpiar el message si está presente
       if (inputValue === message) {
         setInputValue('');
       }
-    } else if (message && (value == null || value === '')) {
-      setInputValue(message);
     }
-  }, [value, selectedOption, isOpen, message, inputValue]);
+  }, [value, selectedOption, isOpen, message]);
 
   // Búsqueda en servidor cuando hay onSearch
   useEffect(() => {
@@ -237,12 +240,13 @@ export function SelectSearch({
     const newValue = e.target.value;
     setInputValue(newValue);
     setIsOpen(true);
-    // Si coincide exactamente con una opción Y no es el message, actualizar el valor
-    const exactMatch = options.find(opt => opt.value === newValue || opt.label === newValue);
-    if (exactMatch && newValue !== message) {
-      onChange(exactMatch.value);
+
+    // Si el usuario borra completamente el texto, deseleccionar
+    if (newValue.trim() === '') {
+      onChange('');
     }
-    // No llamar onChange para valores personalizados durante la búsqueda
+    // No hacer selección automática durante la escritura - permitir edición libre
+    // La selección se hará solo cuando el usuario presione Enter o haga click en una opción
   };
 
   const handleInputFocus = () => {

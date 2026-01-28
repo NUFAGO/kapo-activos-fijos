@@ -6,7 +6,9 @@ import Modal from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { executeQuery } from '@/services/graphql-client';
 import { LIST_ALL_RECURSOS_QUERY } from '@/graphql/queries/recursos.queries';
-import { saveRecursosToIndexedDB, getRecursosFromIndexedDB, isIDBAvailable, ensureTablesExist } from '@/lib/db';
+import { LIST_UNIDADES_QUERY } from '@/graphql/queries/unidades.queries';
+import { LIST_CLASIFICACIONES_RECURSO_QUERY } from '@/graphql/queries/clasificaciones.queries';
+import { saveRecursosToIndexedDB, getRecursosFromIndexedDB, saveUnidadesToIndexedDB, getUnidadesFromIndexedDB, saveClasificacionesToIndexedDB, getClasificacionesFromIndexedDB, isIDBAvailable, ensureTablesExist } from '@/lib/db';
 import toast from 'react-hot-toast';
 
 interface SyncDataFormProps {
@@ -29,10 +31,18 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
   const [syncItems, setSyncItems] = useState<SyncItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null);
-  const [dbStatus, setDbStatus] = useState<{ available: boolean; hasData: boolean; dataCount: number }>({
+  const [dbStatus, setDbStatus] = useState<{
+    available: boolean;
+    recursos: { hasData: boolean; count: number };
+    unidades: { hasData: boolean; count: number };
+    clasificaciones: { hasData: boolean; count: number };
+    totalData: number;
+  }>({
     available: false,
-    hasData: false,
-    dataCount: 0
+    recursos: { hasData: false, count: 0 },
+    unidades: { hasData: false, count: 0 },
+    clasificaciones: { hasData: false, count: 0 },
+    totalData: 0
   });
 
   // Verificar conexión a internet
@@ -55,7 +65,13 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
   // Función para verificar estado de IndexedDB
   const checkDBStatus = async () => {
     if (!isIDBAvailable()) {
-      setDbStatus({ available: false, hasData: false, dataCount: 0 });
+      setDbStatus({
+        available: false,
+        recursos: { hasData: false, count: 0 },
+        unidades: { hasData: false, count: 0 },
+        clasificaciones: { hasData: false, count: 0 },
+        totalData: 0
+      });
       return;
     }
 
@@ -63,15 +79,30 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
       // Asegurar que las tablas existan antes de verificar
       await ensureTablesExist();
 
-      const recursos = await getRecursosFromIndexedDB();
+      const [recursos, unidades, clasificaciones] = await Promise.all([
+        getRecursosFromIndexedDB(),
+        getUnidadesFromIndexedDB(),
+        getClasificacionesFromIndexedDB()
+      ]);
+
+      const totalData = recursos.length + unidades.length + clasificaciones.length;
+
       setDbStatus({
         available: true,
-        hasData: recursos.length > 0,
-        dataCount: recursos.length
+        recursos: { hasData: recursos.length > 0, count: recursos.length },
+        unidades: { hasData: unidades.length > 0, count: unidades.length },
+        clasificaciones: { hasData: clasificaciones.length > 0, count: clasificaciones.length },
+        totalData
       });
     } catch (error) {
       console.error('Error checking DB status:', error);
-      setDbStatus({ available: false, hasData: false, dataCount: 0 });
+      setDbStatus({
+        available: false,
+        recursos: { hasData: false, count: 0 },
+        unidades: { hasData: false, count: 0 },
+        clasificaciones: { hasData: false, count: 0 },
+        totalData: 0
+      });
     }
   };
 
@@ -82,42 +113,105 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
       console.log('Verifying IndexedDB tables...');
       await ensureTablesExist();
 
-      console.log('Consultando recursos desde API...');
-      const variables: any = {
-        activoFijo: true
-      };
-      // Solo descargar recursos activos fijos
-      // variables.searchTerm = undefined; // Sin filtro de búsqueda
-      const result = await executeQuery(LIST_ALL_RECURSOS_QUERY, variables);
-      const recursos = result.listAllRecursos || [];
+      console.log('Consultando datos desde API...');
 
-      console.log('Convirtiendo formato para IndexedDB...');
-      const recursosFormateados = recursos.map((r: any) => ({
-        id: r.id,
-        recurso_id: r.recurso_id,
-        codigo: r.codigo,
-        nombre: r.nombre,
-        descripcion: r.descripcion,
-        activo_fijo: r.activo_fijo,
-        unidad: r.unidad,
-        tipo_recurso: r.tipo_recurso,
+      // Consultar todos los catálogos en paralelo
+      const [recursosResult, unidadesResult, clasificacionesResult] = await Promise.all([
+        executeQuery(LIST_ALL_RECURSOS_QUERY, { activoFijo: true }),
+        executeQuery(LIST_UNIDADES_QUERY, {}),
+        executeQuery(LIST_CLASIFICACIONES_RECURSO_QUERY, {})
+      ]);
+
+      const recursos = recursosResult.listAllRecursos || [];
+      const unidades = unidadesResult.listUnidad || [];
+      const clasificaciones = clasificacionesResult.listClasificacionRecurso || [];
+
+      console.log(`📊 Datos obtenidos - Recursos: ${recursos.length}, Unidades: ${unidades.length}, Clasificaciones: ${clasificaciones.length}`);
+      console.log('📋 Jerarquía original:', clasificaciones.map((c: any) => `${c.nombre} (${c.childs?.length || 0} hijos)`));
+
+      // Filtrar y formatear recursos con IDs válidos
+      const recursosValidos = recursos.filter((r: any) => r.id != null && r.id !== undefined && r.id !== '');
+      console.log(`✅ Recursos válidos: ${recursosValidos.length}/${recursos.length}`);
+      const recursosFormateados = recursos
+        .filter((r: any) => r.id != null && r.id !== undefined && r.id !== '')
+        .map((r: any) => ({
+          id: String(r.id),
+          recurso_id: r.recurso_id,
+          codigo: r.codigo,
+          nombre: r.nombre,
+          descripcion: r.descripcion,
+          activo_fijo: r.activo_fijo,
+          unidad: r.unidad,
+          tipo_recurso: r.tipo_recurso,
+          lastFetched: Date.now(),
+          expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 horas
+        }));
+
+      await saveRecursosToIndexedDB(recursosFormateados);
+      console.log(`✅ Guardados ${recursosFormateados.length} recursos en IndexedDB`);
+
+      // Filtrar y formatear unidades con IDs válidos
+      const unidadesValidas = unidades.filter((u: any) => u.id != null && u.id !== undefined && u.id !== '');
+      console.log(`✅ Unidades válidas: ${unidadesValidas.length}/${unidades.length}`);
+
+      const unidadesFormateadas = unidadesValidas.map((u: any) => ({
+        id: String(u.id),
+        unidad_id: u.unidad_id,
+        nombre: u.nombre || '',
+        descripcion: u.descripcion || '',
         lastFetched: Date.now(),
-        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 horas
+        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 días
       }));
 
-      console.log('💾 Guardando en IndexedDB...');
-      await saveRecursosToIndexedDB(recursosFormateados);
+      await saveUnidadesToIndexedDB(unidadesFormateadas);
+      console.log(`✅ Guardadas ${unidadesFormateadas.length} unidades en IndexedDB`);
 
-      console.log(`✅ Guardados ${recursosFormateados.length} recursos en IndexedDB`);
+      // Guardar TODAS las clasificaciones del backend como registros planos
+      const todasLasClasificaciones: any[] = [];
+
+      const extractAllClasificaciones = (clases: any[]) => {
+        clases.forEach((clas: any) => {
+          // Solo guardar clasificaciones con ID válido
+          if (clas.id != null && clas.id !== undefined && clas.id !== '') {
+            todasLasClasificaciones.push({
+              _id: String(clas.id),
+              nombre: clas.nombre,
+              parent_id: clas.parent_id || null,
+              __v: clas.__v || 0,
+              lastFetched: Date.now(),
+              expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 días
+            });
+          }
+
+          // Procesar hijos recursivamente
+          if (clas.childs && clas.childs.length > 0) {
+            extractAllClasificaciones(clas.childs);
+          }
+        });
+      };
+
+      extractAllClasificaciones(clasificaciones);
+      console.log(`📊 Extraídas ${todasLasClasificaciones.length} clasificaciones del backend para guardar en IndexedDB`);
+
+      // Filtrar clasificaciones válidas (deberían tener _id válido)
+      const clasificacionesValidas = todasLasClasificaciones.filter((c: any) => c._id != null && c._id !== undefined && c._id !== '');
+      console.log(`✅ Clasificaciones válidas: ${clasificacionesValidas.length}/${todasLasClasificaciones.length}`);
+
+      await saveClasificacionesToIndexedDB(clasificacionesValidas);
+      console.log(`Guardadas ${clasificacionesValidas.length} clasificaciones en IndexedDB`);
+
+      const totalRegistros = recursosFormateados.length + unidadesFormateadas.length + clasificacionesValidas.length;
 
       // Actualizar estado
       setDbStatus({
         available: true,
-        hasData: true,
-        dataCount: recursosFormateados.length
+        recursos: { hasData: recursosFormateados.length > 0, count: recursosFormateados.length },
+        unidades: { hasData: unidadesFormateadas.length > 0, count: unidadesFormateadas.length },
+        clasificaciones: { hasData: clasificacionesValidas.length > 0, count: clasificacionesValidas.length },
+        totalData: totalRegistros
       });
 
-      return recursosFormateados.length;
+      return totalRegistros;
     } catch (error) {
       console.error('❌ Error rellenando IndexedDB:', error);
       throw error;
@@ -139,7 +233,7 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
     }
   }, [isOpen]);
 
-  // Cargar items de sincronización - Solo un apartado principal
+  // Cargar items de sincronización - Todos los catálogos
   useEffect(() => {
     if (isOpen) {
       const realSyncItems: SyncItem[] = [
@@ -147,9 +241,27 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
           id: 'recursos-sync',
           type: 'download',
           title: 'Catálogo de Recursos',
-          description: dbStatus.available && dbStatus.hasData
-            ? `Catálogo disponible con ${dbStatus.dataCount} recursos - puedes actualizar cuando quieras`
+          description: dbStatus.available && dbStatus.recursos.hasData
+            ? `${dbStatus.recursos.count} recursos disponibles`
             : 'Catálogo completo de recursos listo para descargar y trabajar sin conexión',
+          status: 'pending' // ✅ Siempre permite actualizar
+        },
+        {
+          id: 'unidades-sync',
+          type: 'download',
+          title: 'Catálogo de Unidades',
+          description: dbStatus.available && dbStatus.unidades.hasData
+            ? `${dbStatus.unidades.count} unidades disponibles`
+            : 'Catálogo completo de unidades listo para descargar y trabajar sin conexión',
+          status: 'pending' // ✅ Siempre permite actualizar
+        },
+        {
+          id: 'clasificaciones-sync',
+          type: 'download',
+          title: 'Catálogo de Clasificaciones',
+          description: dbStatus.available && dbStatus.clasificaciones.hasData
+            ? `${dbStatus.clasificaciones.count} clasificaciones disponibles`
+            : 'Catálogo completo de clasificaciones listo para descargar y trabajar sin conexión',
           status: 'pending' // ✅ Siempre permite actualizar
         }
       ];
@@ -184,13 +296,33 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
             ));
           }
 
-          // Ejecutar sincronización de recursos
+          // Ejecutar sincronización según el tipo de catálogo
           if (item.id === 'recursos-sync') {
             const count = await populateIndexedDB();
             setSyncItems(prev => prev.map(si =>
               si.id === item.id ? {
                 ...si,
-                description: `✅ Catálogo actualizado (${count} recursos descargados)`,
+                description: `Catálogo de recursos actualizado`,
+                progress: 100,
+                status: 'completed' as const
+              } : si
+            ));
+          } else if (item.id === 'unidades-sync') {
+            // Las unidades ya se sincronizan en populateIndexedDB
+            setSyncItems(prev => prev.map(si =>
+              si.id === item.id ? {
+                ...si,
+                description: `Catálogo de unidades actualizado`,
+                progress: 100,
+                status: 'completed' as const
+              } : si
+            ));
+          } else if (item.id === 'clasificaciones-sync') {
+            // Las clasificaciones ya se sincronizan en populateIndexedDB
+            setSyncItems(prev => prev.map(si =>
+              si.id === item.id ? {
+                ...si,
+                description: `Catálogo de clasificaciones actualizado`,
                 progress: 100,
                 status: 'completed' as const
               } : si
@@ -247,13 +379,15 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
         ));
       }
 
-      // Ejecutar sincronización de recursos
-      if (itemId === 'recursos-sync') {
+      // Ejecutar sincronización según el tipo de catálogo
+      if (itemId === 'recursos-sync' || itemId === 'unidades-sync' || itemId === 'clasificaciones-sync') {
         const count = await populateIndexedDB();
+        const catalogName = itemId === 'recursos-sync' ? 'recursos' :
+                           itemId === 'unidades-sync' ? 'unidades' : 'clasificaciones';
         setSyncItems(prev => prev.map(si =>
           si.id === itemId ? {
             ...si,
-            description: `✅ Catálogo actualizado (${count} recursos descargados)`,
+            description: `Catálogo de ${catalogName} actualizado`,
             progress: 100,
             status: 'completed' as const
           } : si
@@ -317,34 +451,36 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Estado de Catálogos"
-      size="lg"
+      title={<span className="text-sm sm:text-base md:text-lg">Estado de Catálogos</span>}
+      size="md"
       footer={
-        <div className="flex justify-between items-center">
-          <div className="text-xs text-[var(--text-secondary)]">
-            {syncItems.length} catálogo{syncItems.length !== 1 ? 's' : ''} disponible{syncItems.length !== 1 ? 's' : ''}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between sm:items-center">
+          <div className="text-xs text-[var(--text-secondary)] text-center sm:text-left">
+            {syncItems.length} catálogo{syncItems.length !== 1 ? 's' : ''} disponible{syncItems.length !== 1 ? 's' : ''} • {dbStatus.totalData} registros totales
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 justify-center sm:justify-end">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-[var(--background)]/50 hover:bg-[var(--background)]/70 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] shadow-sm hover:shadow transition-all duration-200 rounded-lg"
+              className="px-3 sm:px-4 py-2 bg-[var(--background)]/50 hover:bg-[var(--background)]/70 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] shadow-sm hover:shadow transition-all duration-200 rounded-lg"
             >
               Cerrar
             </button>
             <button
               onClick={handleSyncAll}
               disabled={!isOnline || isSyncing}
-              className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-xs text-blue-600 dark:text-blue-400 shadow-sm hover:shadow transition-all duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 sm:px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-xs text-blue-600 dark:text-blue-400 shadow-sm hover:shadow transition-all duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center"
             >
               {isSyncing ? (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Actualizando...
+                  <RefreshCw className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Sincronizando...</span>
+                  <span className="sm:hidden">...</span>
                 </>
               ) : (
                 <>
-                  <Database className="w-4 h-4 mr-2" />
-                  Actualizar Catálogos
+                  <Database className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Sincronizar Todos</span>
+                  <span className="sm:hidden">Sincronizar</span>
                 </>
               )}
             </button>
@@ -352,76 +488,77 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Estado de Conexión e IndexedDB */}
-        <div className="space-y-3">
-          {/* Estado de Conexión */}
-          <div className="flex items-center justify-between p-4 bg-[var(--background)] border border-[var(--border)] rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${isOnline ? 'bg-green-100' : 'bg-red-100'}`}>
-                {isOnline ? (
-                  <Database className="w-5 h-5 text-green-600" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                )}
+        <div className="p-3 sm:p-4 bg-[var(--background)] border border-[var(--border)] rounded-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {/* Estado de Conexión */}
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded ${isOnline ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {isOnline ? (
+                    <Database className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-[var(--text-primary)]">
+                    {isOnline ? 'Conectado' : 'Sin conexión'}
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {isOnline ? 'Listo para actualizar' : 'Se requiere conexión'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-medium text-md text-[var(--text-primary)]">
-                  {isOnline ? 'Conectado' : 'Sin conexión'}
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {isOnline ? 'Listo para actualizar' : 'Se requiere conexión'}
-                </p>
+
+              {/* Estado de IndexedDB */}
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded ${dbStatus.available ? (dbStatus.totalData > 0 ? 'bg-blue-100' : 'bg-yellow-100') : 'bg-red-100'}`}>
+                  {dbStatus.available ? (
+                    dbStatus.totalData > 0 ? (
+                      <CheckCircle className="w-4 h-4 text-blue-600" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-yellow-600" />
+                    )
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs sm:text-xs font-medium text-[var(--text-primary)]">
+                    <span className="hidden sm:inline">
+                      {dbStatus.totalData} registros ({dbStatus.recursos.count}R, {dbStatus.unidades.count}U, {dbStatus.clasificaciones.count}C)
+                    </span>
+                    <span className="sm:hidden">
+                      {dbStatus.totalData} reg.
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="text-right">
+
+            {/* Última sync */}
+            <div className="text-left sm:text-right">
               <p className="text-xs text-[var(--text-secondary)]">Última sync</p>
-              <p className="text-xs font-medium text-[var(--text-primary)]">
+              <p className="text-xs sm:text-xs font-medium text-[var(--text-primary)]">
                 {lastSyncDate ? formatLastSync(lastSyncDate) : 'Nunca'}
               </p>
-            </div>
-          </div>
-
-          {/* Estado de IndexedDB */}
-          <div className="flex items-center justify-between p-4 bg-[var(--background)] border border-[var(--border)] rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${dbStatus.available ? (dbStatus.hasData ? 'bg-blue-100' : 'bg-yellow-100') : 'bg-red-100'}`}>
-                {dbStatus.available ? (
-                  dbStatus.hasData ? (
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                  ) : (
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                  )
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-600" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-medium text-md text-[var(--text-primary)]">
-                  IndexedDB {dbStatus.available ? (dbStatus.hasData ? 'Con Datos' : 'Vacía') : 'No Disponible'}
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {dbStatus.available
-                    ? `${dbStatus.dataCount} recursos almacenados`
-                    : 'Base de datos no disponible'
-                  }
-                </p>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Catálogos Disponibles */}
         <div className="space-y-3">
-          <h4 className="font-medium text-md text-[var(--text-primary)]">Catálogos Disponibles</h4>
+          <h4 className="font-medium text-sm sm:text-md text-[var(--text-primary)]">Catálogos Disponibles</h4>
 
           <div className="space-y-3">
             {syncItems.map((item) => (
               <div
                 key={item.id}
-                className="p-4 bg-[var(--background)] border border-[var(--border)] rounded-lg hover:bg-[var(--hover)]"
+                className="p-3 sm:p-4 bg-[var(--background)] border border-[var(--border)] rounded-lg hover:bg-[var(--hover)]"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${item.type === 'upload' ? 'bg-blue-100' : 'bg-green-100'}`}>
                       {item.type === 'upload' ? (
@@ -430,16 +567,16 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
                         <Download className="w-4 h-4 text-green-600" />
                       )}
                     </div>
-                    <div>
-                      <h5 className="font-medium text-md text-[var(--text-primary)]">{item.title}</h5>
-                      <p className="text-xs text-[var(--text-secondary)]">{item.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h5 className="font-medium text-sm sm:text-md text-[var(--text-primary)] truncate">{item.title}</h5>
+                      <p className="text-xs text-[var(--text-secondary)] line-clamp-2 sm:line-clamp-1">{item.description}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-start sm:self-center">
                     {getStatusIcon(item.status)}
                     <span className={`text-xs font-medium ${getStatusColor(item.status)}`}>
                       {item.status === 'completed' ? 'Disponible' :
-                       item.status === 'syncing' ? 'Actualizando...' :
+                       item.status === 'syncing' ? 'Sincronizando...' :
                        item.status === 'error' ? 'Error' : 'Listo para sync'}
                     </span>
                   </div>
@@ -447,7 +584,7 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
 
                 {/* Barra de progreso */}
                 {item.status === 'syncing' && item.progress !== undefined && (
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${item.progress}%` }}
@@ -457,17 +594,17 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
 
                 {/* Error message */}
                 {item.status === 'error' && item.error && (
-                  <p className="text-xs text-red-600 mt-2">{item.error}</p>
+                  <p className="text-xs text-red-600 mb-2">{item.error}</p>
                 )}
 
                 {/* Botón de actualización individual - Siempre visible cuando hay conexión */}
                 {isOnline && !isSyncing && (
-                  <div className="mt-3 flex justify-end">
+                  <div className="flex justify-end">
                     <button
                       onClick={() => handleSyncItem(item.id)}
-                      className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-xs text-blue-600 dark:text-blue-400 shadow-sm hover:shadow transition-all duration-200 rounded-lg"
+                      className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-xs text-blue-600 dark:text-blue-400 shadow-sm hover:shadow transition-all duration-200 rounded-lg whitespace-nowrap"
                     >
-                      {item.status === 'completed' ? 'Actualizar de Nuevo' : 'Actualizar Ahora'}
+                      {item.status === 'completed' ? 'Sincronizar' : 'Sincronizar Ahora'}
                     </button>
                   </div>
                 )}
@@ -476,22 +613,6 @@ export default function SyncDataForm({ isOpen, onClose }: SyncDataFormProps) {
           </div>
         </div>
 
-        {/* Información adicional - Estado de catálogos */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Database className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <h5 className="font-medium text-md text-blue-800 mb-1">Estado de Catálogos</h5>
-              <ul className="text-xs text-blue-700 space-y-1">
-                <li>• Revisa el estado de tus catálogos de recursos disponibles</li>
-                <li>• Los datos se actualizan automáticamente cada 24 horas</li>
-                <li>• Consulta recursos activos incluso sin conexión a internet</li>
-                <li>• Actualiza manualmente cuando necesites - ¡puedes hacerlo en cualquier momento!</li>
-                <li>• Perfecto para trabajar en campo o zonas con conexión limitada</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
     </Modal>
   );

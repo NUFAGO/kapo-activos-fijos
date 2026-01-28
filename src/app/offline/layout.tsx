@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, WifiOff, Wifi, Database, FileText, Trash2, Settings, Home, Menu, Package, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, WifiOff, Wifi, Database, FileText, Trash2, Settings, Home, Menu, Package, Sun, Moon, ClipboardList } from 'lucide-react';
 import { useOnline } from '@/hooks';
 import { cn } from '@/lib/utils';
 
@@ -113,6 +113,11 @@ function OfflineSidebar({
       icon: Home,
     },
     {
+      name: 'Recursos Activos Fijos',
+      href: '/offline/recursos-af',
+      icon: Package,
+    },
+    {
       name: 'Reportes Activos',
       href: '/offline/reporte-activos-fijos',
       icon: FileText,
@@ -120,7 +125,7 @@ function OfflineSidebar({
     {
       name: 'Gestión Reportes',
       href: '/offline/gestion-reportes',
-      icon: Package,
+      icon: ClipboardList,
     }
   ];
 

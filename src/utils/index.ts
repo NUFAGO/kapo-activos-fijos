@@ -4,6 +4,9 @@
  * Responsabilidad: Funciones helper específicas del negocio
  * Flujo: Importado por componentes y hooks → Utilidades especializadas
  *
+ * Contenido actual:
+ * - input-filters: Utilidades para filtrar entrada de texto en inputs
+ *
  * [Futuro] Contendrá:
  * - formatCurrency: Formateo de moneda
  * - formatDate: Formateo de fechas
@@ -11,6 +14,5 @@
  * - [Futuro] Más utilidades específicas
  */
 
-// [Futuro] Exportar utilidades aquí
-// export { formatCurrency } from './formatters';
-// export { validateActivo } from './validators';
+// Filtros de entrada para inputs
+export * from './input-filters';

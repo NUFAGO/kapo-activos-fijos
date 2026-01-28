@@ -29,7 +29,15 @@ interface ReporteOfflineViewProps {
   isOpen: boolean;
   onClose: () => void;
   reporte: ReporteOffline | null;
+  /** Si se provee y el reporte es pendiente, se muestra "Ir a cambiar esto" para abrir el modal de edición */
+  onIrACambiar?: () => void;
 }
+
+const reporteHasRecursosOffline = (r: ReporteOffline | null) =>
+  r?.recursos?.some((x) => x.codigo_recurso?.startsWith?.('TEMP-')) ?? false;
+
+const MENSAJE_RECURSOS_OFFLINE =
+  'Este informe tiene recursos creados offline. Puedes cambiar a recursos ya existentes o sincronizar para que se creen en el catálogo de recursos.';
 
 // Función para formatear fecha
 const formatDate = (timestamp: number) => {
@@ -258,7 +266,7 @@ const RecursoCard = ({ recurso, index }: { recurso: RecursoOffline; index: numbe
   );
 };
 
-export default function ReporteOfflineView({ isOpen, onClose, reporte }: ReporteOfflineViewProps) {
+export default function ReporteOfflineView({ isOpen, onClose, reporte, onIrACambiar }: ReporteOfflineViewProps) {
   if (!reporte) return null;
 
   // Calcular estadísticas
@@ -326,6 +334,28 @@ export default function ReporteOfflineView({ isOpen, onClose, reporte }: Reporte
           </button>
         </div>
       </div>
+
+      {/* Aviso recursos offline */}
+      {reporteHasRecursosOffline(reporte) && (
+        <div className="mx-3 sm:mx-6 mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 ">
+          <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            {MENSAJE_RECURSOS_OFFLINE}
+            {onIrACambiar && reporte.sync_status === 'pending' && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  onClick={onIrACambiar}
+                  className="underline hover:no-underline font-medium focus:outline-none focus:ring-1 focus:ring-amber-500/50 rounded"
+                >
+                  Clic aquí para editar
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4">

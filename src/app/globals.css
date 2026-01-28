@@ -161,8 +161,8 @@ button[disabled] {
   cursor: not-allowed;
 }
 
-/* Cursor de texto (caret) visible en inputs */
-input {
+/* Cursor de texto (caret) visible en inputs, textareas y elementos relacionados */
+input, textarea, [contenteditable="true"] {
   caret-color: var(--text-primary);
 }
 

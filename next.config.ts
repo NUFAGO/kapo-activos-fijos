@@ -32,6 +32,8 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     if (!isServer && !dev) {
       const workboxPlugin = require('workbox-webpack-plugin');
+      // Revision por build: invalida precache en cada deploy para que usuarios reciban versión nueva
+      const BUILD_REVISION = Date.now().toString();
 
       config.plugins.push(
         new workboxPlugin.GenerateSW({
@@ -40,15 +42,15 @@ const nextConfig: NextConfig = {
           skipWaiting: true,
           clientsClaim: true,
 
-          // PRECACHE: Solo páginas offline y sus subrutas
+          // PRECACHE: Solo páginas offline y sus subrutas (revision por build para actualizar en deploy)
           additionalManifestEntries: [
-            { url: '/offline', revision: null },
-            { url: '/offline/reporte-activos-fijos', revision: null },
-            { url: '/offline/gestion-reportes', revision: null },
-            // Assets estáticos necesarios para offline
-            { url: '/manifest.json', revision: null },
-            { url: '/favicon.ico', revision: null },
-            { url: '/logo-negativo.webp', revision: null }, // Logo del sidebar offline
+            { url: '/offline', revision: BUILD_REVISION },
+            { url: '/offline/recursos-af', revision: BUILD_REVISION },
+            { url: '/offline/reporte-activos-fijos', revision: BUILD_REVISION },
+            { url: '/offline/gestion-reportes', revision: BUILD_REVISION },
+            { url: '/manifest.json', revision: BUILD_REVISION },
+            { url: '/favicon.ico', revision: BUILD_REVISION },
+            { url: '/logo-negativo.webp', revision: BUILD_REVISION },
           ],
 
           // Runtime caching

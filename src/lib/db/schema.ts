@@ -25,6 +25,8 @@ export interface AppConfig extends BaseEntity {
 export interface DBStats {
   appConfig: number;
   recursos: number;
+  unidades: number;
+  clasificaciones: number;
   reportesOffline: number;
   storage: {
     used: number;
